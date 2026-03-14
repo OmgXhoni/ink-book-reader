@@ -1,0 +1,18 @@
+{
+  "id": "dark-card",
+  "name": "Dark Card",
+  "background": { "type": "color", "value": "#0f0f0f" },
+  "textStyle": {
+    "fontFamily": "Palatino",
+    "fontSize": 28,
+    "color": "#f0f0f0",
+    "textAlign": "left",
+    "fontWeight": "normal",
+    "fontStyle": "italic",
+    "lineHeight": 1.7,
+    "shadow": false
+  },
+  "padding": 100,
+  "attributionStyle": { "fontSize": 16, "color": "#888888" },
+  "showQuoteMark": true
+}

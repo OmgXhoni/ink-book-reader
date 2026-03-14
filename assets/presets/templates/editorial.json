@@ -1,0 +1,18 @@
+{
+  "id": "editorial",
+  "name": "Editorial",
+  "background": { "type": "color", "value": "#f5f0e8" },
+  "textStyle": {
+    "fontFamily": "Garamond",
+    "fontSize": 36,
+    "color": "#2c2c2c",
+    "textAlign": "center",
+    "fontWeight": "normal",
+    "fontStyle": "italic",
+    "lineHeight": 1.6,
+    "shadow": false
+  },
+  "padding": 90,
+  "attributionStyle": { "fontSize": 18, "color": "#666666" },
+  "showQuoteMark": false
+}

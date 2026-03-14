@@ -1,0 +1,18 @@
+{
+  "id": "wide",
+  "name": "Wide",
+  "background": { "type": "color", "value": "#11998e" },
+  "textStyle": {
+    "fontFamily": "Georgia",
+    "fontSize": 28,
+    "color": "#ffffff",
+    "textAlign": "left",
+    "fontWeight": "normal",
+    "fontStyle": "italic",
+    "lineHeight": 1.6,
+    "shadow": true
+  },
+  "padding": 120,
+  "attributionStyle": { "fontSize": 18, "color": "#e0e0e0" },
+  "showQuoteMark": true
+}

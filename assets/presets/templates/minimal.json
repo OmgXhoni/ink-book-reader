@@ -1,0 +1,18 @@
+{
+  "id": "minimal",
+  "name": "Minimal",
+  "background": { "type": "color", "value": "#1a1a2e" },
+  "textStyle": {
+    "fontFamily": "Georgia",
+    "fontSize": 32,
+    "color": "#ffffff",
+    "textAlign": "center",
+    "fontWeight": "normal",
+    "fontStyle": "italic",
+    "lineHeight": 1.5,
+    "shadow": false
+  },
+  "padding": 80,
+  "attributionStyle": { "fontSize": 18, "color": "#aaaaaa" },
+  "showQuoteMark": true
+}

@@ -1,0 +1,18 @@
+{
+  "id": "instagram",
+  "name": "Instagram",
+  "background": { "type": "color", "value": "#533483" },
+  "textStyle": {
+    "fontFamily": "Georgia",
+    "fontSize": 34,
+    "color": "#ffffff",
+    "textAlign": "center",
+    "fontWeight": "bold",
+    "fontStyle": "normal",
+    "lineHeight": 1.4,
+    "shadow": true
+  },
+  "padding": 70,
+  "attributionStyle": { "fontSize": 20, "color": "#dddddd" },
+  "showQuoteMark": false
+}
