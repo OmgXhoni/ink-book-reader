@@ -109,7 +109,8 @@ export function useEpub({ bookId, containerRef, initialCfi, onTocLoaded }: UseEp
 
         // Page count
         await book.locations.generate(1024)
-        setTotalPages(book.locations.total)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setTotalPages((book.locations as any).total ?? 0)
 
         if (!destroyed) setIsLoading(false)
       } catch (err) {
@@ -163,7 +164,8 @@ export function useEpub({ bookId, containerRef, initialCfi, onTocLoaded }: UseEp
 
     // Search through book spine
     await Promise.all(
-      book.spine.spineItems.map(async (item) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ((book.spine as any).spineItems ?? (book.spine as any).items ?? []).map(async (item: any) => {
         const doc = await item.load(book.load.bind(book)) as Document | null
         if (!doc) return
 

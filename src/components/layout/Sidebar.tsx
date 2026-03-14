@@ -11,7 +11,7 @@ export function Sidebar() {
 
   return (
     <>
-      <div className="flex flex-col h-full border-r border-white/10">
+      <div className="flex flex-col flex-shrink-0 border-r border-white/10">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
           <div className="flex items-center gap-2">

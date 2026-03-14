@@ -13,7 +13,6 @@ export function sanitizeHtml(html: string): string {
     ],
     ALLOWED_ATTR: ['class', 'id', 'href', 'src', 'alt', 'title', 'style'],
     ALLOW_DATA_ATTR: false,
-    FORBID_SCRIPTS: true,
     FORBID_ATTR: ['onerror', 'onload', 'onclick'],
   })
 }

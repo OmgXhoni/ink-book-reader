@@ -15,6 +15,7 @@
   "author": "Ink",
   "license": "MIT",
   "dependencies": {
+    "adm-zip": "^0.5.16",
     "dompurify": "^3.1.5",
     "electron-store": "^8.2.0",
     "epubjs": "^0.3.93",
@@ -24,6 +25,7 @@
     "zustand": "^4.5.4"
   },
   "devDependencies": {
+    "@types/adm-zip": "^0.5.5",
     "@types/dompurify": "^3.0.5",
     "@types/node": "^20.14.9",
     "@types/react": "^18.3.3",

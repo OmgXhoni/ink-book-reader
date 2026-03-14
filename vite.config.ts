@@ -19,7 +19,7 @@ export default defineConfig({
             sourcemap: true,
             minify: false,
             rollupOptions: {
-              external: ['electron', 'electron-store', 'epubjs', 'pdfjs-dist', 'fs', 'path', 'crypto'],
+              external: ['electron', 'electron-store', 'epubjs', 'pdfjs-dist', 'adm-zip', 'fs', 'path', 'crypto'],
             },
           },
         },
