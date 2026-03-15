@@ -13,7 +13,7 @@ const config: Configuration = {
     'assets/**/*',
   ],
   win: {
-    target: ['nsis'],
+    target: ['nsis', 'portable'],
     icon: 'assets/icons/icon.ico',
     artifactName: '${productName}-${version}-Setup.${ext}',
   },
