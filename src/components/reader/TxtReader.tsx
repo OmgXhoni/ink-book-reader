@@ -18,9 +18,9 @@ export function TxtReader({ book, onClose }: TxtReaderProps) {
   const { settings } = useSettingsStore()
   const {
     progress,
-    isBookmarkPanelOpen,
+    isAnnotationPanelOpen,
     isSearchOpen,
-    setBookmarkPanelOpen,
+    setAnnotationPanelOpen,
     setSearchOpen,
     setSearchResults,
     addBookmark,
@@ -48,8 +48,11 @@ export function TxtReader({ book, onClose }: TxtReaderProps) {
     })
   }, [addBookmark, book.id])
 
-  const themeBackground = settings.theme === 'dark' ? '#1a1a1a' : settings.theme === 'sepia' ? '#f4ecd8' : '#ffffff'
-  const themeColor = settings.theme === 'dark' ? '#e8e8e8' : settings.theme === 'sepia' ? '#5c4b1e' : '#1a1a1a'
+  const resolvedTheme = settings.theme === 'system'
+    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    : settings.theme
+  const themeBackground = resolvedTheme === 'dark' ? '#1a1a1a' : resolvedTheme === 'sepia' ? '#f4ecd8' : '#ffffff'
+  const themeColor = resolvedTheme === 'dark' ? '#e8e8e8' : resolvedTheme === 'sepia' ? '#5c4b1e' : '#1a1a1a'
 
   if (error) {
     return (
@@ -72,12 +75,12 @@ export function TxtReader({ book, onClose }: TxtReaderProps) {
         onClose={onClose}
         onSearch={() => setSearchOpen(!isSearchOpen)}
         onTocToggle={() => {}}
-        onBookmarkToggle={() => setBookmarkPanelOpen(!isBookmarkPanelOpen)}
+        onBookmarkToggle={() => setAnnotationPanelOpen(!isAnnotationPanelOpen)}
         onAddBookmark={handleAddBookmark}
       />
 
       {isSearchOpen && (
-        <div className="px-4 py-2 border-b border-white/10">
+        <div className="px-4 py-2" style={{ borderBottom: '1px solid var(--border-color)' }}>
           <SearchBar onSearch={handleSearch} />
         </div>
       )}
@@ -109,8 +112,8 @@ export function TxtReader({ book, onClose }: TxtReaderProps) {
           )}
         </div>
 
-        {isBookmarkPanelOpen && (
-          <div className="w-72 border-l border-white/10 bg-neutral-950/50 flex-shrink-0 overflow-hidden">
+        {isAnnotationPanelOpen && (
+          <div className="w-72 flex-shrink-0 overflow-hidden" style={{ borderLeft: '1px solid var(--border-color)', background: 'var(--bg-sidebar)' }}>
             <BookmarkPanel
               onNavigate={(pos) => {
                 if (containerRef.current) {
@@ -118,7 +121,7 @@ export function TxtReader({ book, onClose }: TxtReaderProps) {
                   containerRef.current.scrollTop = fraction * (containerRef.current.scrollHeight - containerRef.current.clientHeight)
                 }
               }}
-              onClose={() => setBookmarkPanelOpen(false)}
+              onClose={() => setAnnotationPanelOpen(false)}
             />
           </div>
         )}

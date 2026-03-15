@@ -7,6 +7,62 @@
     box-sizing: border-box;
   }
 
+  /* Theme CSS variables */
+  :root,
+  [data-theme="dark"] {
+    --bg-app: #0a0a0a;
+    --bg-sidebar: rgba(23, 23, 23, 0.6);
+    --bg-surface: rgba(255, 255, 255, 0.05);
+    --bg-surface-hover: rgba(255, 255, 255, 0.1);
+    --bg-toolbar: rgba(23, 23, 23, 0.95);
+    --bg-input: rgba(255, 255, 255, 0.05);
+    --bg-card-placeholder: #262626;
+    --text-primary: #f5f5f5;
+    --text-secondary: rgba(255, 255, 255, 0.7);
+    --text-muted: rgba(255, 255, 255, 0.5);
+    --text-faint: rgba(255, 255, 255, 0.2);
+    --border-color: rgba(255, 255, 255, 0.1);
+    --border-hover: rgba(255, 255, 255, 0.2);
+    --scrollbar-thumb: rgba(255, 255, 255, 0.1);
+    --scrollbar-thumb-hover: rgba(255, 255, 255, 0.2);
+    --select-option-bg: #1f1f2e;
+    --select-option-color: white;
+    --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' viewBox='0 0 24 24'%3E%3Cpath stroke='rgba(255,255,255,0.4)' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    --range-track: rgba(255, 255, 255, 0.15);
+    --reader-bg: #1a1a1a;
+    --reader-text: #e8e8e8;
+    --accent: #a3a3a3;
+    --accent-bg: rgba(255, 255, 255, 0.15);
+    --accent-active: #d4d4d4;
+  }
+
+  [data-theme="light"] {
+    --bg-app: #f5f5f5;
+    --bg-sidebar: rgba(235, 235, 235, 0.8);
+    --bg-surface: rgba(0, 0, 0, 0.04);
+    --bg-surface-hover: rgba(0, 0, 0, 0.08);
+    --bg-toolbar: rgba(245, 245, 245, 0.95);
+    --bg-input: rgba(0, 0, 0, 0.05);
+    --bg-card-placeholder: #e5e5e5;
+    --text-primary: #171717;
+    --text-secondary: rgba(0, 0, 0, 0.7);
+    --text-muted: rgba(0, 0, 0, 0.5);
+    --text-faint: rgba(0, 0, 0, 0.15);
+    --border-color: rgba(0, 0, 0, 0.1);
+    --border-hover: rgba(0, 0, 0, 0.2);
+    --scrollbar-thumb: rgba(0, 0, 0, 0.15);
+    --scrollbar-thumb-hover: rgba(0, 0, 0, 0.25);
+    --select-option-bg: #ffffff;
+    --select-option-color: #171717;
+    --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' viewBox='0 0 24 24'%3E%3Cpath stroke='rgba(0,0,0,0.4)' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    --range-track: rgba(0, 0, 0, 0.15);
+    --reader-bg: #ffffff;
+    --reader-text: #1a1a1a;
+    --accent: #525252;
+    --accent-bg: rgba(0, 0, 0, 0.08);
+    --accent-active: #262626;
+  }
+
   html, body, #root {
     height: 100%;
     margin: 0;
@@ -16,8 +72,8 @@
 
   body {
     font-family: Inter, system-ui, sans-serif;
-    background: #0a0a0a;
-    color: #f5f5f5;
+    background: var(--bg-app);
+    color: var(--text-primary);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -33,12 +89,12 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--scrollbar-thumb);
     border-radius: 3px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--scrollbar-thumb-hover);
   }
 
   /* Range input styling */
@@ -52,14 +108,14 @@
     width: 14px;
     height: 14px;
     border-radius: 50%;
-    background: #8b5cf6;
+    background: var(--accent-active);
     cursor: pointer;
     margin-top: -4px;
   }
 
   input[type='range']::-webkit-slider-runnable-track {
     height: 4px;
-    background: rgba(255, 255, 255, 0.15);
+    background: var(--range-track);
     border-radius: 2px;
   }
 
@@ -67,20 +123,25 @@
   select {
     -webkit-appearance: none;
     appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' viewBox='0 0 24 24'%3E%3Cpath stroke='rgba(255,255,255,0.4)' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-image: var(--select-chevron);
     background-repeat: no-repeat;
     background-position: right 8px center;
     padding-right: 28px !important;
   }
 
   select option {
-    background-color: #1f1f2e;
-    color: white;
+    background-color: var(--select-option-bg);
+    color: var(--select-option-color);
   }
 
   /* EPUB reader iframe styles */
   .epub-container iframe {
     border: none !important;
+  }
+
+  /* Smooth page transitions for epubjs */
+  .epub-container .epub-view {
+    transition: transform 0.25s ease;
   }
 }
 
@@ -92,4 +153,25 @@
   .drag {
     -webkit-app-region: drag;
   }
+}
+
+@keyframes loading-bar {
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(150%); }
+  100% { transform: translateX(-100%); }
+}
+
+.animate-loading-bar {
+  animation: loading-bar 1.5s ease-in-out infinite;
+}
+
+@keyframes fade-in-out {
+  0% { opacity: 0; transform: translate(-50%, -8px); }
+  15% { opacity: 1; transform: translate(-50%, 0); }
+  85% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -8px); }
+}
+
+.animate-fade-in-out {
+  animation: fade-in-out 1.5s ease-in-out forwards;
 }

@@ -7,6 +7,9 @@ export interface AppSettings {
   theme: ThemeMode
   fontSize: number
   fontFamily: string
+  fontVariant?: string
+  fontWeight?: number
+  bundledFamilyId?: string
   lineHeight: number
   readerFlow: ReaderFlow
   marginSize: MarginSize

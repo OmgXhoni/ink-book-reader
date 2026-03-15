@@ -3,6 +3,7 @@ import type { Book, BookMetadata } from '@/types/book'
 
 export type ViewMode = 'grid' | 'list'
 export type SortBy = 'dateAdded' | 'lastOpened' | 'title' | 'author'
+export type FilterMode = 'all' | 'recents' | 'new' | 'inProgress' | 'finished' | 'length' | 'titleAZ' | 'authorAZ'
 
 interface LibraryState {
   books: Book[]
@@ -10,6 +11,7 @@ interface LibraryState {
   searchQuery: string
   viewMode: ViewMode
   sortBy: SortBy
+  filterMode: FilterMode
   isLoading: boolean
   error: string | null
 
@@ -24,6 +26,7 @@ interface LibraryState {
   setSearchQuery: (query: string) => void
   setViewMode: (mode: ViewMode) => void
   setSortBy: (sort: SortBy) => void
+  setFilterMode: (mode: FilterMode) => void
   updateMetadata: (bookId: string, metadata: Partial<BookMetadata>) => Promise<void>
   openAddBookDialog: () => Promise<void>
 }
@@ -64,6 +67,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   searchQuery: '',
   viewMode: 'grid',
   sortBy: 'dateAdded',
+  filterMode: 'all',
   isLoading: false,
   error: null,
   filteredBooks: [],
@@ -127,6 +131,8 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   },
 
   setViewMode: (mode) => set({ viewMode: mode }),
+
+  setFilterMode: (mode) => set({ filterMode: mode }),
 
   setSortBy: (sort) => {
     const { books, searchQuery } = get()

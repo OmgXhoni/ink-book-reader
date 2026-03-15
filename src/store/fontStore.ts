@@ -1,18 +1,24 @@
 import { create } from 'zustand'
 import type { CustomFont } from '@/types/font'
+import { BUNDLED_FONT_FAMILIES, type BundledFontFamily } from '@/data/bundledFonts'
 
 interface FontState {
   fonts: CustomFont[]
+  bundledFamilies: BundledFontFamily[]
+  activeBundledDataUrl: string | null
   isLoading: boolean
 
   loadFonts: () => Promise<void>
   importFonts: () => Promise<void>
   removeFont: (fontId: string) => Promise<void>
   getFontDataUrl: (fontId: string) => Promise<string | null>
+  loadBundledVariant: (familyId: string, fileName: string) => Promise<string | null>
 }
 
 export const useFontStore = create<FontState>((set, get) => ({
   fonts: [],
+  bundledFamilies: BUNDLED_FONT_FAMILIES,
+  activeBundledDataUrl: null,
   isLoading: false,
 
   loadFonts: async () => {
@@ -45,5 +51,11 @@ export const useFontStore = create<FontState>((set, get) => ({
 
   getFontDataUrl: async (fontId) => {
     return window.electronAPI.getFontDataUrl(fontId)
+  },
+
+  loadBundledVariant: async (familyId, fileName) => {
+    const dataUrl = await window.electronAPI.getBundledFontDataUrl(familyId, fileName)
+    set({ activeBundledDataUrl: dataUrl })
+    return dataUrl
   },
 }))

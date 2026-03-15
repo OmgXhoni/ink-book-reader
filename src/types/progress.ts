@@ -14,3 +14,14 @@ export interface Bookmark {
   excerpt?: string
   createdAt: string
 }
+
+export type HighlightColor = 'yellow' | 'red' | 'blue' | 'green' | 'pink'
+
+export interface Highlight {
+  id: string
+  bookId: string
+  cfiRange: string
+  text: string
+  color: HighlightColor
+  createdAt: string
+}

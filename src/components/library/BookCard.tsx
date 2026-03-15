@@ -6,10 +6,13 @@ import { BookContextMenu } from './BookContextMenu'
 interface BookCardProps {
   book: Book
   progress?: number
+  totalPages?: number
   onClick: () => void
   onDelete: () => void
   onEditMetadata: () => void
   onOpenQuote: () => void
+  onResetToNew: () => void
+  onSetFinished: () => void
 }
 
 const FORMAT_COLORS: Record<string, string> = {
@@ -19,7 +22,7 @@ const FORMAT_COLORS: Record<string, string> = {
   html: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
 }
 
-export function BookCard({ book, progress = 0, onClick, onDelete, onEditMetadata, onOpenQuote }: BookCardProps) {
+export function BookCard({ book, progress = 0, totalPages, onClick, onDelete, onEditMetadata, onOpenQuote, onResetToNew, onSetFinished }: BookCardProps) {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
   const [coverError, setCoverError] = useState(false)
 
@@ -31,12 +34,21 @@ export function BookCard({ book, progress = 0, onClick, onDelete, onEditMetadata
   return (
     <>
       <div
-        className="group relative bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl overflow-hidden cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl"
+        className="group relative rounded-xl overflow-hidden cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl"
+        style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', opacity: progress >= 100 ? 0.5 : 1 }}
+        onMouseEnter={e => {
+          e.currentTarget.style.background = 'var(--bg-surface-hover)'
+          e.currentTarget.style.borderColor = 'var(--border-hover)'
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.background = 'var(--bg-surface)'
+          e.currentTarget.style.borderColor = 'var(--border-color)'
+        }}
         onClick={onClick}
         onContextMenu={handleContextMenu}
       >
         {/* Cover */}
-        <div className="aspect-[2/3] relative bg-neutral-800 overflow-hidden">
+        <div className="aspect-[2/3] relative overflow-hidden" style={{ background: 'var(--bg-card-placeholder)' }}>
           {book.metadata.coverUrl && !coverError ? (
             <img
               src={book.metadata.coverUrl}
@@ -45,7 +57,7 @@ export function BookCard({ book, progress = 0, onClick, onDelete, onEditMetadata
               onError={() => setCoverError(true)}
             />
           ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center p-3 bg-gradient-to-br from-ink-800 to-ink-950">
+            <div className="w-full h-full flex flex-col items-center justify-center p-3 bg-gradient-to-br from-neutral-600 to-neutral-800">
               <svg className="w-10 h-10 text-white/20 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
               </svg>
@@ -68,8 +80,31 @@ export function BookCard({ book, progress = 0, onClick, onDelete, onEditMetadata
 
         {/* Info */}
         <div className="p-3">
-          <p className="text-white text-sm font-medium line-clamp-2 leading-tight">{book.metadata.title}</p>
-          <p className="text-white/50 text-xs mt-0.5 truncate">{book.metadata.author}</p>
+          <p className="text-sm font-medium line-clamp-2 leading-tight" style={{ color: 'var(--text-primary)' }}>{book.metadata.title}</p>
+          <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--text-muted)' }}>{book.metadata.author}</p>
+          {/* Status: New / Finished / Progress bar */}
+          <div className="mt-2">
+            {!book.lastOpened ? (
+              <p className="text-[11px] font-semibold" style={{ color: 'var(--text-primary)' }}>New</p>
+            ) : progress >= 100 ? (
+              <p className="text-[11px] font-bold" style={{ color: '#ef4444' }}>FINISHED</p>
+            ) : progress > 0 ? (
+              <>
+                <div className="flex items-center justify-between text-[10px] mb-0.5" style={{ color: 'var(--text-muted)' }}>
+                  <span>{progress}%</span>
+                  <span>{totalPages ? `${Math.round(totalPages * (100 - progress) / 100)} pages left` : `${100 - progress}% left`}</span>
+                </div>
+                <div className="w-full h-1 rounded-full overflow-hidden" style={{ background: 'var(--bg-card-placeholder)' }}>
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{ width: `${progress}%`, background: 'var(--text-muted)' }}
+                  />
+                </div>
+              </>
+            ) : (
+              <p className="text-[11px] font-semibold" style={{ color: 'var(--text-primary)' }}>New</p>
+            )}
+          </div>
         </div>
       </div>
 
@@ -81,6 +116,8 @@ export function BookCard({ book, progress = 0, onClick, onDelete, onEditMetadata
           onDelete={onDelete}
           onEditMetadata={onEditMetadata}
           onOpenQuote={onOpenQuote}
+          onResetToNew={onResetToNew}
+          onSetFinished={onSetFinished}
         />
       )}
     </>

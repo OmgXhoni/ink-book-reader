@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import type { Book as EpubBook, Rendition } from 'epubjs'
 import { useSettingsStore } from '@/store/settingsStore'
+import { useFontStore } from '@/store/fontStore'
 import { useProgress } from './useProgress'
 import type { SearchResult } from '@/store/readerStore'
 
@@ -9,6 +10,7 @@ interface UseEpubOptions {
   containerRef: React.RefObject<HTMLDivElement>
   initialCfi?: string
   onTocLoaded?: (toc: TocItem[]) => void
+  onTextSelected?: (cfiRange: string, text: string, rect: { x: number; y: number }) => void
 }
 
 export interface TocItem {
@@ -18,40 +20,82 @@ export interface TocItem {
   subitems?: TocItem[]
 }
 
-export function useEpub({ bookId, containerRef, initialCfi, onTocLoaded }: UseEpubOptions) {
+export function useEpub({ bookId, containerRef, initialCfi, onTocLoaded, onTextSelected }: UseEpubOptions) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(0)
+  const [percentage, setPercentage] = useState(0)
   const [currentCfi, setCurrentCfi] = useState<string>('')
   const bookRef = useRef<EpubBook | null>(null)
   const renditionRef = useRef<Rendition | null>(null)
+  const isPageTurnRef = useRef(false)
+  const latestCfiRef = useRef<string>(initialCfi || '')
+  const onTextSelectedRef = useRef(onTextSelected)
+  onTextSelectedRef.current = onTextSelected
   const { settings } = useSettingsStore()
+  const { activeBundledDataUrl } = useFontStore()
   const { saveProgress } = useProgress(bookId)
 
   const applyTheme = useCallback((rendition: Rendition) => {
-    const themeStyles: Record<string, string> = {
-      light: 'background-color: #ffffff; color: #1a1a1a;',
-      dark: 'background-color: #1a1a1a; color: #e8e8e8;',
-      sepia: 'background-color: #f4ecd8; color: #5c4b1e;',
-      system: '',
+    const resolvedTheme = settings.theme === 'system'
+      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+      : settings.theme
+
+    const backgrounds: Record<string, string> = {
+      light: '#ffffff',
+      dark: '#1a1a1a',
+      sepia: '#f4ecd8',
+    }
+    const colors: Record<string, string> = {
+      light: '#1a1a1a',
+      dark: '#e8e8e8',
+      sepia: '#5c4b1e',
+    }
+
+    const bodyStyles: Record<string, string> = {
+      'font-family': `"${settings.fontFamily}", serif !important`,
+      'font-size': `${settings.fontSize}px !important`,
+      'line-height': `${settings.lineHeight} !important`,
+      'padding': settings.marginSize === 'small' ? '1rem 2rem' : settings.marginSize === 'large' ? '1rem 6rem' : '1rem 4rem',
+      'background-color': `${backgrounds[resolvedTheme]} !important`,
+      'color': `${colors[resolvedTheme]} !important`,
+    }
+
+    if (settings.fontWeight) {
+      bodyStyles['font-weight'] = `${settings.fontWeight} !important`
     }
 
     rendition.themes.default({
-      body: {
-        'font-family': `"${settings.fontFamily}", serif !important`,
-        'font-size': `${settings.fontSize}px !important`,
-        'line-height': `${settings.lineHeight} !important`,
-        'padding': settings.marginSize === 'small' ? '1rem 2rem' : settings.marginSize === 'large' ? '1rem 6rem' : '1rem 4rem',
+      body: bodyStyles,
+      'img': {
+        'mix-blend-mode': 'normal !important',
+        'filter': 'none !important',
+      },
+      'p, h1, h2, h3, h4, h5, h6, span, div, li, a, em, strong, blockquote': {
+        'color': `inherit !important`,
       },
     })
 
-    if (settings.theme !== 'system') {
-      rendition.themes.default({
-        body: themeStyles[settings.theme],
+    // Inject @font-face into epub iframe for bundled/custom fonts
+    if (activeBundledDataUrl && settings.bundledFamilyId) {
+      const fontName = settings.fontFamily
+      const mimeType = activeBundledDataUrl.startsWith('data:font/otf') ? 'font/otf' : 'font/ttf'
+      const fontFaceCSS = `@font-face { font-family: "${fontName}"; src: url("${activeBundledDataUrl}") format("${mimeType === 'font/otf' ? 'opentype' : 'truetype'}"); font-display: swap; }`
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      rendition.hooks.content.register((contents: any) => {
+        const doc = contents.document as Document
+        // Remove old injected font style if any
+        const oldStyle = doc.getElementById('ink-injected-font')
+        if (oldStyle) oldStyle.remove()
+        const style = doc.createElement('style')
+        style.id = 'ink-injected-font'
+        style.textContent = fontFaceCSS
+        doc.head.appendChild(style)
       })
     }
-  }, [settings])
+  }, [settings, activeBundledDataUrl])
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -61,6 +105,8 @@ export function useEpub({ bookId, containerRef, initialCfi, onTocLoaded }: UseEp
     const initEpub = async () => {
       setIsLoading(true)
       setError(null)
+      setCurrentPage(1)
+      setTotalPages(0)
 
       try {
         const buffer = await window.electronAPI.getFileBuffer(bookId)
@@ -70,10 +116,12 @@ export function useEpub({ bookId, containerRef, initialCfi, onTocLoaded }: UseEp
 
         await book.ready
 
+        const isScrolled = settings.readerFlow !== 'paginated'
         const rendition = book.renderTo(containerRef.current!, {
           width: '100%',
           height: '100%',
-          flow: settings.readerFlow === 'paginated' ? 'paginated' : 'scrolled',
+          flow: isScrolled ? 'scrolled' : 'paginated',
+          manager: isScrolled ? 'continuous' : 'default',
           spread: 'none',
         })
         renditionRef.current = rendition
@@ -93,24 +141,107 @@ export function useEpub({ bookId, containerRef, initialCfi, onTocLoaded }: UseEp
           onTocLoaded(mapToc(nav.toc))
         }
 
-        // Navigate to saved position or start
-        if (initialCfi) {
-          await rendition.display(initialCfi)
+        // Generate locations BEFORE display so relocated events have accurate data
+        await book.locations.generate(1024)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const total = (book.locations as any).total ?? 0
+        setTotalPages(total)
+
+        if (isScrolled) {
+          // Scrolling mode: forward wheel + arrow keys to the continuous scroll container
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          rendition.hooks.content.register((contents: any) => {
+            const doc = contents.document as Document
+            // Forward wheel events to epubjs scroll container
+            doc.addEventListener('wheel', (e: WheelEvent) => {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const manager = (rendition as any).manager
+              const scrollEl = manager?.container as HTMLElement | undefined
+              if (scrollEl) {
+                scrollEl.scrollBy({ top: e.deltaY, left: e.deltaX })
+              }
+            }, { passive: true })
+            // Arrow keys scroll the container instead of turning pages
+            doc.addEventListener('keydown', (e: KeyboardEvent) => {
+              if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+                e.preventDefault()
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const manager = (rendition as any).manager
+                const scrollEl = manager?.container as HTMLElement | undefined
+                if (scrollEl) scrollEl.scrollBy({ top: 80, behavior: 'smooth' })
+              }
+              if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                e.preventDefault()
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const manager = (rendition as any).manager
+                const scrollEl = manager?.container as HTMLElement | undefined
+                if (scrollEl) scrollEl.scrollBy({ top: -80, behavior: 'smooth' })
+              }
+            })
+          })
         } else {
-          await rendition.display()
+          // Paginated mode: arrow keys turn pages, no scroll
+          rendition.on('keydown', (e: KeyboardEvent) => {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+              e.preventDefault()
+              isPageTurnRef.current = true
+              setCurrentPage(p => p + 1)
+              rendition.next()
+            }
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+              e.preventDefault()
+              isPageTurnRef.current = true
+              setCurrentPage(p => Math.max(1, p - 1))
+              rendition.prev()
+            }
+          })
         }
 
         // Track location changes
-        rendition.on('locationChanged', (loc: { start: { cfi: string }; percentage: number }) => {
+        rendition.on('relocated', (loc: { start: { cfi: string; displayed: { page: number; total: number } }; atStart: boolean; atEnd: boolean }) => {
           if (destroyed) return
           setCurrentCfi(loc.start.cfi)
-          saveProgress(loc.start.cfi, Math.round(loc.percentage * 100))
+          latestCfiRef.current = loc.start.cfi
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const pct = book.locations.percentageFromCfi(loc.start.cfi) as any as number
+          const pctSafe = typeof pct === 'number' && !isNaN(pct) ? pct : 0
+          setPercentage(Math.round(pctSafe * 100))
+          // For page turns, use smooth +1/-1 (already set). For jumps, compute from percentage.
+          if (!isPageTurnRef.current) {
+            const page = loc.atStart ? 1 : Math.max(1, Math.ceil(pctSafe * total))
+            setCurrentPage(page)
+          }
+          isPageTurnRef.current = false
+          saveProgress(loc.start.cfi, Math.round(pctSafe * 100), total)
         })
 
-        // Page count
-        await book.locations.generate(1024)
+        // Listen for text selection
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setTotalPages((book.locations as any).total ?? 0)
+        rendition.on('selected', (cfiRange: string, contents: any) => {
+          if (!onTextSelectedRef.current) return
+          try {
+            const selection = contents.window.getSelection()
+            if (!selection || selection.isCollapsed) return
+            const text = selection.toString().trim()
+            if (!text) return
+            const range = selection.getRangeAt(0)
+            const rect = range.getBoundingClientRect()
+            const iframe = contents.document.defaultView.frameElement as HTMLIFrameElement
+            const iframeRect = iframe.getBoundingClientRect()
+            onTextSelectedRef.current(cfiRange, text, {
+              x: iframeRect.left + rect.left + rect.width / 2,
+              y: iframeRect.top + rect.top,
+            })
+          } catch { /* ignore */ }
+        })
+
+        // Navigate to saved position or start — AFTER locations generated
+        const resumeCfi = latestCfiRef.current || initialCfi
+        if (resumeCfi) {
+          await rendition.display(resumeCfi)
+        } else {
+          await rendition.display()
+        }
 
         if (!destroyed) setIsLoading(false)
       } catch (err) {
@@ -130,7 +261,7 @@ export function useEpub({ bookId, containerRef, initialCfi, onTocLoaded }: UseEp
       bookRef.current = null
       renditionRef.current = null
     }
-  }, [bookId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [bookId, settings.readerFlow]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (renditionRef.current) {
@@ -139,14 +270,18 @@ export function useEpub({ bookId, containerRef, initialCfi, onTocLoaded }: UseEp
   }, [applyTheme])
 
   const nextPage = useCallback(() => {
-    renditionRef.current?.next()
+    if (settings.readerFlow !== 'paginated') return // no page turning in scroll mode
+    isPageTurnRef.current = true
     setCurrentPage(p => p + 1)
-  }, [])
+    renditionRef.current?.next()
+  }, [settings.readerFlow])
 
   const prevPage = useCallback(() => {
-    renditionRef.current?.prev()
+    if (settings.readerFlow !== 'paginated') return // no page turning in scroll mode
+    isPageTurnRef.current = true
     setCurrentPage(p => Math.max(1, p - 1))
-  }, [])
+    renditionRef.current?.prev()
+  }, [settings.readerFlow])
 
   const goToCfi = useCallback((cfi: string) => {
     renditionRef.current?.display(cfi)
@@ -156,35 +291,195 @@ export function useEpub({ bookId, containerRef, initialCfi, onTocLoaded }: UseEp
     renditionRef.current?.display(href)
   }, [])
 
+  const goToStart = useCallback(() => {
+    renditionRef.current?.display()
+  }, [])
+
+  const resize = useCallback(() => {
+    if (renditionRef.current) {
+      renditionRef.current.resize(undefined as unknown as number, undefined as unknown as number)
+    }
+  }, [])
+
   const search = useCallback(async (query: string): Promise<SearchResult[]> => {
     if (!bookRef.current || !query.trim()) return []
 
     const results: SearchResult[] = []
     const book = bookRef.current
 
-    // Search through book spine
-    await Promise.all(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ((book.spine as any).spineItems ?? (book.spine as any).items ?? []).map(async (item: any) => {
-        const doc = await item.load(book.load.bind(book)) as Document | null
-        if (!doc) return
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const spine = book.spine as any
 
-        const text = doc.body?.textContent || ''
-        const queryLower = query.toLowerCase()
-        let idx = text.toLowerCase().indexOf(queryLower)
+    // Use the spine's each() or iterate spineItems
+    const spineItems: any[] = spine.spineItems ?? spine.items ?? []
 
-        while (idx !== -1 && results.length < 100) {
-          const excerpt = text.slice(Math.max(0, idx - 30), idx + query.length + 30)
-          results.push({
-            excerpt: `...${excerpt}...`,
-            index: results.length,
-          })
-          idx = text.toLowerCase().indexOf(queryLower, idx + 1)
+    for (const section of spineItems) {
+      if (results.length >= 100) break
+
+      try {
+        // Load the section document using the book's load method
+        await section.load(book.load.bind(book))
+
+        // epubjs Section has a find() method that searches text and returns CFIs
+        if (typeof section.find === 'function') {
+          const found = section.find(query)
+          for (const match of found) {
+            if (results.length >= 100) break
+            results.push({
+              cfi: match.cfi || undefined,
+              excerpt: match.excerpt ? `...${match.excerpt}...` : query,
+              index: results.length,
+            })
+          }
         }
-      })
-    )
+
+        // Unload to free memory
+        if (typeof section.unload === 'function') {
+          section.unload()
+        }
+      } catch {
+        // Skip sections that fail to load
+      }
+    }
 
     return results
+  }, [])
+
+  // Track search highlight CFIs so we can clear only those
+  const searchHighlightCfisRef = useRef<string[]>([])
+
+  const highlightSearchResults = useCallback((cfis: string[]) => {
+    const rendition = renditionRef.current
+    if (!rendition) return
+    // Clear previous search highlights only
+    for (const cfi of searchHighlightCfisRef.current) {
+      try { rendition.annotations.remove(cfi, 'highlight') } catch { /* ignore */ }
+    }
+    searchHighlightCfisRef.current = []
+    // Add new search highlights (yellow)
+    for (const cfi of cfis) {
+      if (cfi?.startsWith('epubcfi(')) {
+        try {
+          rendition.annotations.highlight(cfi, { type: 'search' }, () => {}, 'search-highlight', {
+            'fill': '#f87171',
+            'fill-opacity': '0.4',
+            'mix-blend-mode': 'multiply',
+          })
+          searchHighlightCfisRef.current.push(cfi)
+        } catch { /* ignore invalid CFIs */ }
+      }
+    }
+  }, [])
+
+  const clearSearchHighlights = useCallback(() => {
+    const rendition = renditionRef.current
+    if (!rendition) return
+    for (const cfi of searchHighlightCfisRef.current) {
+      try { rendition.annotations.remove(cfi, 'highlight') } catch { /* ignore */ }
+    }
+    searchHighlightCfisRef.current = []
+  }, [])
+
+  const HIGHLIGHT_COLORS: Record<string, string> = {
+    yellow: '#fbbf24',
+    blue: '#93c5fd',
+    green: '#86efac',
+    pink: '#f9a8d4',
+  }
+
+  // Track all active user highlight CFIs for reliable removal
+  const userHighlightCfisRef = useRef<Set<string>>(new Set())
+
+  const clearAllUserHighlights = useCallback(() => {
+    const rendition = renditionRef.current
+    if (!rendition) return
+    for (const cfi of userHighlightCfisRef.current) {
+      try { rendition.annotations.remove(cfi, 'highlight') } catch { /* ignore */ }
+    }
+    // Also brute-force remove any remaining user highlights from the annotations map
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const annotations = (rendition as any).annotations
+    if (annotations?._annotations) {
+      for (const key of Object.keys(annotations._annotations)) {
+        const ann = annotations._annotations[key]
+        if (ann?.data?.type === 'user') {
+          try { rendition.annotations.remove(key, 'highlight') } catch { /* ignore */ }
+        }
+      }
+    }
+    userHighlightCfisRef.current.clear()
+  }, [])
+
+  const applyUserHighlights = useCallback((highlights: Array<{ cfiRange: string; color: string }>) => {
+    const rendition = renditionRef.current
+    if (!rendition) return
+    // Clear existing user highlights first to avoid duplicates
+    clearAllUserHighlights()
+    for (const h of highlights) {
+      const fill = HIGHLIGHT_COLORS[h.color] || HIGHLIGHT_COLORS.yellow
+      try {
+        rendition.annotations.highlight(h.cfiRange, { type: 'user', color: h.color }, () => {}, `user-highlight-${h.color}`, {
+          'fill': fill,
+          'fill-opacity': '0.35',
+          'mix-blend-mode': 'multiply',
+        })
+        userHighlightCfisRef.current.add(h.cfiRange)
+      } catch { /* ignore */ }
+    }
+  }, [clearAllUserHighlights])
+
+  const addUserHighlight = useCallback((cfiRange: string, color: string) => {
+    const rendition = renditionRef.current
+    if (!rendition) return
+    const fill = HIGHLIGHT_COLORS[color] || HIGHLIGHT_COLORS.yellow
+    try {
+      rendition.annotations.highlight(cfiRange, { type: 'user', color }, () => {}, `user-highlight-${color}`, {
+        'fill': fill,
+        'fill-opacity': '0.35',
+        'mix-blend-mode': 'multiply',
+      })
+      userHighlightCfisRef.current.add(cfiRange)
+    } catch { /* ignore */ }
+  }, [])
+
+  const removeUserHighlight = useCallback((cfiRange: string) => {
+    const rendition = renditionRef.current
+    if (!rendition) return
+    try { rendition.annotations.remove(cfiRange, 'highlight') } catch { /* ignore */ }
+    userHighlightCfisRef.current.delete(cfiRange)
+    // If epubjs remove didn't work, force clear and re-apply all except this one
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const annotations = (rendition as any).annotations
+    if (annotations?._annotations?.[cfiRange]) {
+      // Still there — nuclear option: clear all and re-apply
+      const remaining = Array.from(userHighlightCfisRef.current)
+      clearAllUserHighlights()
+      // Re-apply will be triggered by the store update in EpubReader
+    }
+  }, [clearAllUserHighlights])
+
+  /** Search for exact text in the book and return its CFI range. Used as fallback for highlight splitting. */
+  const findTextCfi = useCallback(async (text: string): Promise<string | null> => {
+    if (!bookRef.current || !text.trim()) return null
+    const book = bookRef.current
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const spine = book.spine as any
+    const spineItems: any[] = spine.spineItems ?? spine.items ?? []
+
+    for (const section of spineItems) {
+      try {
+        await section.load(book.load.bind(book))
+        if (typeof section.find === 'function') {
+          const found = section.find(text.trim())
+          if (found.length > 0 && found[0].cfi) {
+            if (typeof section.unload === 'function') section.unload()
+            return found[0].cfi as string
+          }
+        }
+        if (typeof section.unload === 'function') section.unload()
+      } catch { /* skip */ }
+    }
+    return null
   }, [])
 
   return {
@@ -192,11 +487,21 @@ export function useEpub({ bookId, containerRef, initialCfi, onTocLoaded }: UseEp
     error,
     currentPage,
     totalPages,
+    percentage,
     currentCfi,
     nextPage,
     prevPage,
     goToCfi,
     goToHref,
+    goToStart,
     search,
+    resize,
+    highlightSearchResults,
+    clearSearchHighlights,
+    addUserHighlight,
+    removeUserHighlight,
+    applyUserHighlights,
+    findTextCfi,
+    getRendition: () => renditionRef.current,
   }
 }

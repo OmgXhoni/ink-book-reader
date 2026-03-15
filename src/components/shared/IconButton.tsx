@@ -20,9 +20,24 @@ export function IconButton({ label, active, size = 'md', children, className = '
       aria-label={label}
       className={`
         inline-flex items-center justify-center rounded-lg transition-all
-        ${active ? 'bg-ink-600 text-white' : 'text-white/60 hover:text-white hover:bg-white/10'}
         ${sizes[size]} ${className}
       `}
+      style={active
+        ? { background: 'var(--accent-bg)', color: 'var(--accent-active)' }
+        : { color: 'var(--text-muted)' }
+      }
+      onMouseEnter={e => {
+        if (!active) {
+          e.currentTarget.style.color = 'var(--text-primary)'
+          e.currentTarget.style.background = 'var(--bg-surface-hover)'
+        }
+      }}
+      onMouseLeave={e => {
+        if (!active) {
+          e.currentTarget.style.color = 'var(--text-muted)'
+          e.currentTarget.style.background = 'transparent'
+        }
+      }}
       {...props}
     >
       {children}

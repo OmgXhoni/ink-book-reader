@@ -47,7 +47,10 @@ export function usePdf({ bookId, containerRef, initialPage = 1 }: UsePdfOptions)
       const ctx = canvas.getContext('2d')!
 
       // Apply theme background
-      ctx.fillStyle = settings.theme === 'dark' ? '#1a1a1a' : settings.theme === 'sepia' ? '#f4ecd8' : '#ffffff'
+      const resolvedTheme = settings.theme === 'system'
+        ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+        : settings.theme
+      ctx.fillStyle = resolvedTheme === 'dark' ? '#1a1a1a' : resolvedTheme === 'sepia' ? '#f4ecd8' : '#ffffff'
       ctx.fillRect(0, 0, canvas.width, canvas.height)
 
       await page.render({

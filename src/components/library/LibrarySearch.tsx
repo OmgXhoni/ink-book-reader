@@ -9,7 +9,8 @@ export function LibrarySearch({ value, onChange }: LibrarySearchProps) {
   return (
     <div className="relative">
       <svg
-        className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40"
+        className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
+        style={{ color: 'var(--text-muted)' }}
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -21,14 +22,16 @@ export function LibrarySearch({ value, onChange }: LibrarySearchProps) {
         placeholder="Search books..."
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-ink-500/50 focus:bg-white/8 transition-colors"
+        className="w-full rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none transition-colors"
+        style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}
       />
       {value && (
         <button
           onClick={() => onChange('')}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70"
+          className="absolute right-3 top-1/2 -translate-y-1/2"
+          style={{ color: 'var(--text-muted)' }}
         >
-          ×
+          x
         </button>
       )}
     </div>

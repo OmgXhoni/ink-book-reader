@@ -47,17 +47,19 @@ export function useHtml({ bookId, iframeRef, initialFraction = 0 }: UseHtmlOptio
   }, [bookId])
 
   const getThemeCSS = useCallback(() => {
+    const resolvedTheme = settings.theme === 'system'
+      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+      : settings.theme
+
     const backgrounds: Record<string, string> = {
       light: '#ffffff',
       dark: '#1a1a1a',
       sepia: '#f4ecd8',
-      system: '',
     }
     const colors: Record<string, string> = {
       light: '#1a1a1a',
       dark: '#e8e8e8',
       sepia: '#5c4b1e',
-      system: '',
     }
 
     return `
@@ -65,11 +67,15 @@ export function useHtml({ bookId, iframeRef, initialFraction = 0 }: UseHtmlOptio
         font-family: "${settings.fontFamily}", serif;
         font-size: ${settings.fontSize}px;
         line-height: ${settings.lineHeight};
-        ${settings.theme !== 'system' ? `background-color: ${backgrounds[settings.theme]};` : ''}
-        ${settings.theme !== 'system' ? `color: ${colors[settings.theme]};` : ''}
+        background-color: ${backgrounds[resolvedTheme]};
+        color: ${colors[resolvedTheme]};
         padding: ${settings.marginSize === 'small' ? '1rem 2rem' : settings.marginSize === 'large' ? '1rem 6rem' : '1rem 4rem'};
         max-width: 900px;
         margin: 0 auto;
+      }
+      img, svg, video, canvas {
+        mix-blend-mode: normal;
+        filter: none;
       }
     `
   }, [settings])

@@ -1,6 +1,6 @@
 import Store from 'electron-store'
 import type { Book } from '../../src/types/book'
-import type { ReadingProgress, Bookmark } from '../../src/types/progress'
+import type { ReadingProgress, Bookmark, Highlight } from '../../src/types/progress'
 import type { AppSettings } from '../../src/types/settings'
 import type { CustomFont } from '../../src/types/font'
 
@@ -8,6 +8,7 @@ interface StoreSchema {
   library: Book[]
   progress: Record<string, ReadingProgress>
   bookmarks: Record<string, Bookmark[]>
+  highlights: Record<string, Highlight[]>
   settings: AppSettings
   fonts: CustomFont[]
 }
@@ -28,6 +29,7 @@ export const store = new Store<StoreSchema>({
     library: [],
     progress: {},
     bookmarks: {},
+    highlights: {},
     settings: defaultSettings,
     fonts: [],
   },

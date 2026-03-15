@@ -39,14 +39,16 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', className
 
       {/* Modal */}
       <div
-        className={`relative bg-neutral-900 border border-white/10 rounded-2xl shadow-2xl w-full animate-scale-in ${sizeClasses[size]} ${className}`}
+        className={`relative rounded-2xl shadow-2xl w-full animate-scale-in ${sizeClasses[size]} ${className}`}
+        style={{ background: 'var(--bg-toolbar)', border: '1px solid var(--border-color)' }}
       >
         {title && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-            <h2 className="text-lg font-semibold text-white">{title}</h2>
+          <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border-color)' }}>
+            <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>{title}</h2>
             <button
               onClick={onClose}
-              className="text-white/50 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10"
+              className="transition-colors p-1 rounded-lg"
+              style={{ color: 'var(--text-muted)' }}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

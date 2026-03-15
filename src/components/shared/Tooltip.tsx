@@ -25,7 +25,7 @@ export function Tooltip({ content, children, position = 'top' }: TooltipProps) {
       {children}
       {show && (
         <div className={`absolute z-50 pointer-events-none ${positions[position]}`}>
-          <div className="bg-neutral-800 border border-white/10 text-white text-xs px-2 py-1 rounded-md whitespace-nowrap shadow-lg">
+          <div className="text-xs px-2 py-1 rounded-md whitespace-nowrap shadow-lg" style={{ background: 'var(--bg-toolbar)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}>
             {content}
           </div>
         </div>

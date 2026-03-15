@@ -16,9 +16,9 @@ export function HtmlReader({ book, onClose }: HtmlReaderProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const {
     progress,
-    isBookmarkPanelOpen,
+    isAnnotationPanelOpen,
     isSearchOpen,
-    setBookmarkPanelOpen,
+    setAnnotationPanelOpen,
     setSearchOpen,
     setSearchResults,
     addBookmark,
@@ -63,12 +63,12 @@ export function HtmlReader({ book, onClose }: HtmlReaderProps) {
         onClose={onClose}
         onSearch={() => setSearchOpen(!isSearchOpen)}
         onTocToggle={() => {}}
-        onBookmarkToggle={() => setBookmarkPanelOpen(!isBookmarkPanelOpen)}
+        onBookmarkToggle={() => setAnnotationPanelOpen(!isAnnotationPanelOpen)}
         onAddBookmark={handleAddBookmark}
       />
 
       {isSearchOpen && (
-        <div className="px-4 py-2 border-b border-white/10">
+        <div className="px-4 py-2" style={{ borderBottom: '1px solid var(--border-color)' }}>
           <SearchBar onSearch={handleSearch} />
         </div>
       )}
@@ -90,11 +90,11 @@ export function HtmlReader({ book, onClose }: HtmlReaderProps) {
           )}
         </div>
 
-        {isBookmarkPanelOpen && (
-          <div className="w-72 border-l border-white/10 bg-neutral-950/50 flex-shrink-0 overflow-hidden">
+        {isAnnotationPanelOpen && (
+          <div className="w-72 flex-shrink-0 overflow-hidden" style={{ borderLeft: '1px solid var(--border-color)', background: 'var(--bg-sidebar)' }}>
             <BookmarkPanel
               onNavigate={() => {}}
-              onClose={() => setBookmarkPanelOpen(false)}
+              onClose={() => setAnnotationPanelOpen(false)}
             />
           </div>
         )}

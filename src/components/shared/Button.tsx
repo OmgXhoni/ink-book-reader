@@ -7,13 +7,6 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode
 }
 
-const variants = {
-  primary: 'bg-ink-600 hover:bg-ink-500 text-white border border-ink-500/30',
-  secondary: 'bg-white/10 hover:bg-white/15 text-white border border-white/10',
-  ghost: 'bg-transparent hover:bg-white/10 text-white/70 hover:text-white',
-  danger: 'bg-red-600/80 hover:bg-red-500 text-white border border-red-500/30',
-}
-
 const sizes = {
   sm: 'px-3 py-1.5 text-sm',
   md: 'px-4 py-2 text-sm',
@@ -27,16 +20,25 @@ export function Button({
   disabled,
   children,
   className = '',
+  style,
   ...props
 }: ButtonProps) {
+  const variantStyles: Record<string, React.CSSProperties> = {
+    primary: { background: 'var(--text-primary)', color: 'var(--bg-app)', border: '1px solid var(--border-color)' },
+    secondary: { background: 'var(--bg-surface)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' },
+    ghost: { background: 'transparent', color: 'var(--text-secondary)' },
+    danger: { background: '#dc2626cc', color: '#fff', border: '1px solid #ef444450' },
+  }
+
   return (
     <button
       disabled={disabled || loading}
       className={`
         inline-flex items-center gap-2 rounded-lg font-medium transition-all
         disabled:opacity-50 disabled:cursor-not-allowed
-        ${variants[variant]} ${sizes[size]} ${className}
+        ${sizes[size]} ${className}
       `}
+      style={{ ...variantStyles[variant], ...style }}
       {...props}
     >
       {loading && (

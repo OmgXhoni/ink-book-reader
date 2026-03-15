@@ -8,6 +8,9 @@ export function useProgress(bookId: string) {
 
   const saveProgress = useCallback(
     (position: string, percentage: number, totalPages?: number) => {
+      // Update live values immediately for real-time UI
+      useReaderStore.setState({ livePercentage: percentage, liveTotalPages: totalPages })
+
       if (timerRef.current) clearTimeout(timerRef.current)
       timerRef.current = setTimeout(() => {
         const progress: ReadingProgress = {

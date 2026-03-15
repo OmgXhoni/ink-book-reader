@@ -5,6 +5,7 @@ import { registerLibraryIpc } from './ipc/library.ipc'
 import { registerMetadataIpc } from './ipc/metadata.ipc'
 import { registerProgressIpc } from './ipc/progress.ipc'
 import { registerBookmarksIpc } from './ipc/bookmarks.ipc'
+import { registerHighlightsIpc } from './ipc/highlights.ipc'
 import { registerFontsIpc } from './ipc/fonts.ipc'
 import { registerSettingsIpc } from './ipc/settings.ipc'
 import { registerExportIpc } from './ipc/export.ipc'
@@ -20,6 +21,7 @@ function createWindow(): void {
     minWidth: 900,
     minHeight: 600,
     title: 'Ink',
+    icon: path.join(__dirname, '../assets/icons/icon.ico'),
     backgroundColor: '#1a1a1a',
     webPreferences: {
       preload: preloadPath,
@@ -74,6 +76,7 @@ app.whenReady().then(() => {
   registerMetadataIpc()
   registerProgressIpc()
   registerBookmarksIpc()
+  registerHighlightsIpc()
   registerFontsIpc()
   registerSettingsIpc()
   registerExportIpc()

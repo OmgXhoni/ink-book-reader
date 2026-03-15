@@ -17,9 +17,9 @@ export function PdfReader({ book, onClose }: PdfReaderProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const {
     progress,
-    isBookmarkPanelOpen,
+    isAnnotationPanelOpen,
     isSearchOpen,
-    setBookmarkPanelOpen,
+    setAnnotationPanelOpen,
     setSearchOpen,
     setSearchResults,
     searchResults,
@@ -74,18 +74,18 @@ export function PdfReader({ book, onClose }: PdfReaderProps) {
         onClose={onClose}
         onSearch={() => setSearchOpen(!isSearchOpen)}
         onTocToggle={() => {}}
-        onBookmarkToggle={() => setBookmarkPanelOpen(!isBookmarkPanelOpen)}
+        onBookmarkToggle={() => setAnnotationPanelOpen(!isAnnotationPanelOpen)}
         onAddBookmark={handleAddBookmark}
       />
 
       {isSearchOpen && (
-        <div className="px-4 py-2 border-b border-white/10">
+        <div className="px-4 py-2" style={{ borderBottom: '1px solid var(--border-color)' }}>
           <SearchBar onSearch={handleSearch} />
         </div>
       )}
 
       <div className="flex flex-1 min-h-0">
-        <div className="flex-1 relative overflow-hidden bg-neutral-800">
+        <div className="flex-1 relative overflow-hidden" style={{ background: 'var(--bg-card-placeholder)' }}>
           {isLoading ? (
             <div className="absolute inset-0 flex items-center justify-center">
               <Spinner size="lg" />
@@ -110,11 +110,11 @@ export function PdfReader({ book, onClose }: PdfReaderProps) {
           )}
         </div>
 
-        {isBookmarkPanelOpen && (
-          <div className="w-72 border-l border-white/10 bg-neutral-950/50 flex-shrink-0 overflow-hidden">
+        {isAnnotationPanelOpen && (
+          <div className="w-72 flex-shrink-0 overflow-hidden" style={{ borderLeft: '1px solid var(--border-color)', background: 'var(--bg-sidebar)' }}>
             <BookmarkPanel
               onNavigate={(pos) => goToPage(parseInt(pos, 10))}
-              onClose={() => setBookmarkPanelOpen(false)}
+              onClose={() => setAnnotationPanelOpen(false)}
             />
           </div>
         )}

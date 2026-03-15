@@ -17,17 +17,24 @@ export type ElectronAPI = {
   // Progress
   getProgress: (bookId: string) => Promise<unknown>
   saveProgress: (bookId: string, progress: unknown) => Promise<boolean>
+  resetBook: (bookId: string) => Promise<boolean>
 
   // Bookmarks
   getBookmarks: (bookId: string) => Promise<unknown[]>
   addBookmark: (bookId: string, bookmark: unknown) => Promise<unknown>
   removeBookmark: (bookId: string, bookmarkId: string) => Promise<boolean>
 
+  // Highlights
+  getHighlights: (bookId: string) => Promise<unknown[]>
+  addHighlight: (bookId: string, highlight: unknown) => Promise<unknown>
+  removeHighlight: (bookId: string, highlightId: string) => Promise<boolean>
+
   // Fonts
   getAllFonts: () => Promise<unknown[]>
   importFonts: () => Promise<unknown[]>
   deleteFont: (fontId: string) => Promise<boolean>
   getFontDataUrl: (fontId: string) => Promise<string | null>
+  getBundledFontDataUrl: (familyId: string, fileName: string) => Promise<string | null>
 
   // Settings
   getSettings: () => Promise<unknown>
@@ -57,17 +64,24 @@ const api: ElectronAPI = {
   // Progress
   getProgress: (bookId) => ipcRenderer.invoke('progress:get', bookId),
   saveProgress: (bookId, progress) => ipcRenderer.invoke('progress:save', bookId, progress),
+  resetBook: (bookId) => ipcRenderer.invoke('progress:reset', bookId),
 
   // Bookmarks
   getBookmarks: (bookId) => ipcRenderer.invoke('bookmarks:get', bookId),
   addBookmark: (bookId, bookmark) => ipcRenderer.invoke('bookmarks:add', bookId, bookmark),
   removeBookmark: (bookId, bookmarkId) => ipcRenderer.invoke('bookmarks:remove', bookId, bookmarkId),
 
+  // Highlights
+  getHighlights: (bookId) => ipcRenderer.invoke('highlights:get', bookId),
+  addHighlight: (bookId, highlight) => ipcRenderer.invoke('highlights:add', bookId, highlight),
+  removeHighlight: (bookId, highlightId) => ipcRenderer.invoke('highlights:remove', bookId, highlightId),
+
   // Fonts
   getAllFonts: () => ipcRenderer.invoke('fonts:get-all'),
   importFonts: () => ipcRenderer.invoke('fonts:import'),
   deleteFont: (fontId) => ipcRenderer.invoke('fonts:delete', fontId),
   getFontDataUrl: (fontId) => ipcRenderer.invoke('fonts:get-data-url', fontId),
+  getBundledFontDataUrl: (familyId, fileName) => ipcRenderer.invoke('fonts:get-bundled-data-url', familyId, fileName),
 
   // Settings
   getSettings: () => ipcRenderer.invoke('settings:get'),

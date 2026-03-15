@@ -1,11 +1,31 @@
-import { ipcMain, dialog } from 'electron'
+import { ipcMain, dialog, app } from 'electron'
+import * as fs from 'fs'
+import * as path from 'path'
 import { store } from '../services/store'
 import { importFont, deleteFont, getFontDataUrl } from '../services/fontManager'
 import type { CustomFont } from '../../src/types/font'
 
+function getBundledFontsDir(): string {
+  return path.join(app.getAppPath(), 'assets', 'fonts')
+}
+
 export function registerFontsIpc(): void {
   ipcMain.handle('fonts:get-all', () => {
     return store.get('fonts') as CustomFont[]
+  })
+
+  ipcMain.handle('fonts:get-bundled-data-url', (_event, familyId: string, fileName: string) => {
+    try {
+      const filePath = path.join(getBundledFontsDir(), familyId, fileName)
+      if (!fs.existsSync(filePath)) return null
+      const data = fs.readFileSync(filePath)
+      const base64 = data.toString('base64')
+      const ext = path.extname(fileName).toLowerCase()
+      const mimeType = ext === '.otf' ? 'font/otf' : 'font/ttf'
+      return `data:${mimeType};base64,${base64}`
+    } catch {
+      return null
+    }
   })
 
   ipcMain.handle('fonts:import', async () => {
