@@ -5,9 +5,8 @@ import { ReaderToolbar } from './ReaderToolbar'
 import { AnnotationsPanel } from './AnnotationsPanel'
 import { SearchBar } from './SearchBar'
 import { Spinner } from '../shared/Spinner'
-import { HighlightPopup } from './HighlightPopup'
 import type { Book } from '@/types/book'
-import type { Bookmark, HighlightColor, HighlightRect } from '@/types/progress'
+import type { Bookmark } from '@/types/progress'
 
 interface PdfReaderProps {
   book: Book
@@ -19,7 +18,6 @@ export function PdfReader({ book, onClose }: PdfReaderProps) {
   const {
     progress,
     bookmarks,
-    highlights,
     isAnnotationPanelOpen,
     isSearchOpen,
     setAnnotationPanelOpen,
@@ -29,23 +27,18 @@ export function PdfReader({ book, onClose }: PdfReaderProps) {
     currentSearchIndex,
     addBookmark,
     removeBookmark,
-    addHighlight,
-    removeHighlight,
   } = useReaderStore()
 
   const [bookmarkToast, setBookmarkToast] = useState(false)
-  const [highlightPopup, setHighlightPopup] = useState<{ x: number; y: number; text: string; rects: HighlightRect[]; page: number } | null>(null)
 
   const initialPage = progress?.position ? parseInt(progress.position, 10) : 1
-  const { isLoading, error, currentPage, totalPages, nextPage, prevPage, goToPage, search } = usePdf({
+  const { isLoading, error, currentPage, totalPages, nextPage, prevPage, goToPage, search, zoomLevel, zoomIn, zoomOut } = usePdf({
     bookId: book.id,
     containerRef,
     initialPage,
-    highlights,
   })
 
   const hasBookmarkOnCurrentPage = bookmarks.some((b: Bookmark) => b.position === String(currentPage))
-
 
   const handleSearch = useCallback(async (query: string) => {
     const results = await search(query)
@@ -77,62 +70,6 @@ export function PdfReader({ book, onClose }: PdfReaderProps) {
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [nextPage, prevPage, setSearchOpen])
-
-
-  // Text selection → highlight popup
-  useEffect(() => {
-    if (isLoading) return
-    const handler = () => {
-      const selection = window.getSelection()
-      const text = selection?.toString().trim()
-      if (!text) return
-      const container = containerRef.current
-      if (!container) return
-      const anchorNode = selection?.anchorNode
-      if (!container.contains(anchorNode as Node)) return
-      const range = selection?.getRangeAt(0)
-      if (!range) return
-      const rect = range.getBoundingClientRect()
-      if (!rect) return
-
-      // Collect page-relative rects for visual highlight rendering
-      // anchorNode may be a text node — walk up to element first
-      const anchorEl = anchorNode?.nodeType === Node.TEXT_NODE
-        ? (anchorNode as Text).parentElement
-        : anchorNode as Element
-      const pageWrapper = anchorEl?.closest('.pdf-page-wrapper') as HTMLElement | null
-      const pageNum = pageWrapper ? parseInt(pageWrapper.dataset.page || '0') : 0
-      const rects: HighlightRect[] = pageWrapper
-        ? (() => {
-            const wRect = pageWrapper.getBoundingClientRect()
-            return Array.from(range.getClientRects()).reduce<HighlightRect[]>((acc, r) => {
-              if (r.width < 1 || r.height < 1) return acc
-              // Only include rects that overlap this page wrapper (filter cross-page rects)
-              if (r.left > wRect.right || r.right < wRect.left || r.top > wRect.bottom || r.bottom < wRect.top) return acc
-              acc.push({ x: r.left - wRect.left, y: r.top - wRect.top, w: r.width, h: r.height })
-              return acc
-            }, [])
-          })()
-        : []
-
-      setHighlightPopup({ x: rect.left + rect.width / 2, y: rect.top - 8, text, rects, page: pageNum })
-    }
-    document.addEventListener('mouseup', handler)
-    return () => document.removeEventListener('mouseup', handler)
-  }, [isLoading])
-
-  const handleHighlightColor = useCallback(async (color: HighlightColor) => {
-    if (!highlightPopup) return
-    await addHighlight({
-      bookId: book.id,
-      cfiRange: `pdf:page:${highlightPopup.page || currentPage}`,
-      text: highlightPopup.text,
-      color,
-      rects: highlightPopup.rects,
-    })
-    window.getSelection()?.removeAllRanges()
-    setHighlightPopup(null)
-  }, [highlightPopup, addHighlight, book.id, currentPage])
 
   const handleAddBookmark = useCallback(async () => {
     const existing = bookmarks.find((b: Bookmark) => b.position === String(currentPage))
@@ -175,6 +112,9 @@ export function PdfReader({ book, onClose }: PdfReaderProps) {
         totalPages={totalPages}
         onPrevPage={prevPage}
         onNextPage={nextPage}
+        zoomLevel={zoomLevel}
+        onZoomIn={zoomIn}
+        onZoomOut={zoomOut}
       />
 
       {isSearchOpen && (
@@ -223,20 +163,12 @@ export function PdfReader({ book, onClose }: PdfReaderProps) {
                 const pageNum = pos.startsWith('pdf:page:') ? parseInt(pos.replace('pdf:page:', '')) : parseInt(pos, 10)
                 if (!isNaN(pageNum)) goToPage(pageNum)
               }}
-              onRemoveHighlight={(id) => removeHighlight(id)}
+              onRemoveHighlight={() => {}}
               onClose={() => setAnnotationPanelOpen(false)}
             />
           </div>
         )}
       </div>
-
-      {highlightPopup && (
-        <HighlightPopup
-          position={{ x: highlightPopup.x, y: highlightPopup.y }}
-          onSelect={handleHighlightColor}
-          onClose={() => { window.getSelection()?.removeAllRanges(); setHighlightPopup(null) }}
-        />
-      )}
     </div>
   )
 }

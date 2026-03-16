@@ -20,6 +20,9 @@ interface ReaderToolbarProps {
   totalPages?: number
   onPrevPage?: () => void
   onNextPage?: () => void
+  zoomLevel?: number
+  onZoomIn?: () => void
+  onZoomOut?: () => void
 }
 
 const THEMES = [
@@ -29,7 +32,7 @@ const THEMES = [
   { id: 'system', label: 'System', bg: 'linear-gradient(135deg, #fff 50%, #1a1a1a 50%)', text: '#888' },
 ]
 
-export function ReaderToolbar({ book, onClose, onSearch, onTocToggle, onBookmarkToggle, onAddBookmark, isPdf, currentPage, totalPages, onPrevPage, onNextPage }: ReaderToolbarProps) {
+export function ReaderToolbar({ book, onClose, onSearch, onTocToggle, onBookmarkToggle, onAddBookmark, isPdf, currentPage, totalPages, onPrevPage, onNextPage, zoomLevel, onZoomIn, onZoomOut }: ReaderToolbarProps) {
   const { settings, updateSettings } = useSettingsStore()
   const { isTocOpen, isAnnotationPanelOpen, isSearchOpen } = useReaderStore()
   const [showSettings, setShowSettings] = useState(false)
@@ -95,6 +98,29 @@ export function ReaderToolbar({ book, onClose, onSearch, onTocToggle, onBookmark
             </svg>
           </IconButton>
         </Tooltip>
+      )}
+
+      {/* Zoom (PDF only) */}
+      {isPdf && onZoomOut && onZoomIn && (
+        <div className="flex items-center gap-0.5">
+          <Tooltip content="Zoom Out">
+            <IconButton label="Zoom Out" onClick={onZoomOut}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 17v5M5 10a7 7 0 1114 0 7 7 0 01-14 0zM9 10h6" />
+              </svg>
+            </IconButton>
+          </Tooltip>
+          <span className="text-xs select-none min-w-[36px] text-center" style={{ color: 'var(--text-muted)' }}>
+            {Math.round((zoomLevel ?? 1) * 100)}%
+          </span>
+          <Tooltip content="Zoom In">
+            <IconButton label="Zoom In" onClick={onZoomIn}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 17v5M5 10a7 7 0 1114 0 7 7 0 01-14 0zM9 10h6M12 7v6" />
+              </svg>
+            </IconButton>
+          </Tooltip>
+        </div>
       )}
 
       {/* Search */}

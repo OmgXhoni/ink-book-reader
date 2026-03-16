@@ -25,19 +25,27 @@ Use `;` (not `&&`) between pkill and open so open always runs even if no process
 
 ### macOS: prepare DMG for distribution
 
-Must follow this exact sequence — electron-builder overwrites signing if steps are out of order. Use `CSC_IDENTITY_AUTO_DISCOVERY=false` to prevent it from interfering:
+Must follow this exact sequence. Two rules that must both be satisfied:
+1. Sign each component **inside-out** (helpers → framework → main app) **without** `--deep` and **without** `--options runtime`. Using `--deep` leaves generic `Electron Helper` identifiers; using `--options runtime` (hardened runtime) triggers "damaged" without notarization.
+2. Strip xattr from the `.app` before DMG packaging and from the `.dmg` after.
 
 ```bash
 npm run build:vite
 CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --mac dir
-codesign --force --deep --sign - "release/mac-arm64/Ink Book Reader.app"
+# Sign inside-out, no hardened runtime:
+find "release/mac-arm64/Ink Book Reader.app/Contents/Frameworks" \( -name "*.dylib" -o -name "*.so" \) -exec codesign --force --sign - {} \;
+codesign --force --sign - "release/mac-arm64/Ink Book Reader.app/Contents/Frameworks/Ink Book Reader Helper (Renderer).app"
+codesign --force --sign - "release/mac-arm64/Ink Book Reader.app/Contents/Frameworks/Ink Book Reader Helper (Plugin).app"
+codesign --force --sign - "release/mac-arm64/Ink Book Reader.app/Contents/Frameworks/Ink Book Reader Helper (GPU).app"
+codesign --force --sign - "release/mac-arm64/Ink Book Reader.app/Contents/Frameworks/Ink Book Reader Helper.app"
+codesign --force --sign - "release/mac-arm64/Ink Book Reader.app/Contents/Frameworks/Electron Framework.framework"
+codesign --force --sign - "release/mac-arm64/Ink Book Reader.app"
 xattr -cr "release/mac-arm64/Ink Book Reader.app"
 CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --mac dmg
-codesign --force --sign - "release/Ink Book Reader-1.0.0-arm64.dmg"
 xattr -cr "release/Ink Book Reader-1.0.0-arm64.dmg"
 ```
 
-Both the `.app` and the `.dmg` must be signed and stripped. Skipping either causes Gatekeeper to show "damaged" for users downloading from the internet.
+Result: `flags=0x2(adhoc)` on all components, `com.ink.bookreader.*` identifiers, sealed resources — Gatekeeper shows "unverified" warning (bypassable) instead of "damaged" (not bypassable).
 
 ## Architecture
 
@@ -94,14 +102,11 @@ All reader hooks call `useProgress` internally (1-second debounced saves). Posit
 
 ### PDF renderer details
 
-`usePdf` renders every page as a `div.pdf-page-wrapper[data-page="N"]` stacked inside the scroll container. Each wrapper holds:
-1. A `<canvas>` (`pointer-events:none`) for the rendered page image
-2. A `.pdf-text-layer` div (`pointer-events:auto`, `user-select:none`) with absolutely-positioned `<span>` elements (`user-select:text`) from pdfjs `TextLayer`
-3. `.pdf-highlight-overlay` divs (absolutely positioned, `pointer-events:none`) for visual highlights
+`usePdf` renders every page as a `div.pdf-page-wrapper[data-page="N"]` stacked inside the scroll container. Each wrapper holds a `<canvas>` (`pointer-events:none`) for the rendered page image. Pages are fit-to-page scaled (`Math.min(scaleW, scaleH) * zoomLevel`). Current page is tracked by scroll overlap detection. `goToPage(n)` scrolls the wrapper into view.
 
-Current page is tracked by scroll overlap detection. `goToPage(n)` scrolls the wrapper into view.
+**PDF text selection and highlighting are currently disabled.** No text layer or highlight overlays are rendered. EPUB highlighting remains fully functional. A backup of the removed PDF highlight code is saved at `ink-book-reader-pdf-highlight-backup.txt` (local + Google Drive).
 
-**PDF highlights** store page-relative pixel rects (`HighlightRect[]` on the `Highlight` type). On selection, rects come from `range.getClientRects()` filtered to the anchor page wrapper's bounds and converted to page-relative coordinates. The page number is read from `pageWrapper.dataset.page` (not from scroll-tracked state). The re-apply effect clears all `.pdf-highlight-overlay` from all pages before re-rendering to keep overlays in sync with the store.
+**PDF zoom**: `zoomLevel` state (default 1.0) with `zoomIn`/`zoomOut` callbacks (±0.15, range 0.3–3.0). Toolbar shows zoom controls (vertical-stem magnifying glass icons) for PDF only.
 
 **pdfjs worker in packaged app**: the worker URL contains `app.asar/` which must be rewritten to `app.asar.unpacked/` at runtime — this is handled in `usePdf`'s `initPdf`.
 
@@ -110,7 +115,7 @@ Current page is tracked by scroll overlap detection. `goToPage(n)` scrolls the w
 `ReaderToolbar` uses a three-section layout:
 - Left (`flex:1`): back button + book title
 - Center (`position:absolute; left:50%`): prev / page-X-of-Y / next — shown for all formats when `totalPages > 1`
-- Right (`flex:1; justify-end`): TOC (EPUB only), search, annotations, bookmark, settings
+- Right (`flex:1; justify-end`): TOC (EPUB only), zoom (PDF only), search, annotations, bookmark, settings
 
 ### Build outputs
 

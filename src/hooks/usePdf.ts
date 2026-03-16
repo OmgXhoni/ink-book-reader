@@ -4,109 +4,11 @@ import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useProgress } from './useProgress'
 import type { SearchResult } from '@/store/readerStore'
-import type { Highlight, HighlightColor } from '@/types/progress'
 
 interface UsePdfOptions {
   bookId: string
   containerRef: React.RefObject<HTMLDivElement>
   initialPage?: number
-  highlights?: Highlight[]
-}
-
-const COLOR_MAP: Record<HighlightColor, string> = {
-  yellow: 'rgba(255, 220, 0, 0.45)',
-  red: 'rgba(255, 80, 80, 0.45)',
-  blue: 'rgba(80, 140, 255, 0.45)',
-  green: 'rgba(80, 200, 100, 0.45)',
-  pink: 'rgba(255, 100, 180, 0.45)',
-}
-
-function injectTextLayerStyles() {
-  if (document.querySelector('#pdf-text-layer-styles')) return
-  const style = document.createElement('style')
-  style.id = 'pdf-text-layer-styles'
-  style.textContent = `
-    .pdf-text-layer {
-      position: absolute; top: 0; left: 0;
-      overflow: visible;
-      pointer-events: none;
-      -webkit-user-select: none;
-      user-select: none;
-      z-index: 2;
-      line-height: 1;
-    }
-    .pdf-text-layer span,
-    .pdf-text-layer br {
-      position: absolute;
-      white-space: pre;
-      cursor: text;
-      transform-origin: 0% 0%;
-      color: transparent;
-      pointer-events: auto !important;
-      -webkit-user-select: text !important;
-      user-select: text !important;
-    }
-    .pdf-text-layer span::selection {
-      background: rgba(0, 120, 255, 0.35);
-      color: transparent;
-    }
-    .pdf-highlight-overlay {
-      position: absolute;
-      pointer-events: none;
-      z-index: 1;
-      border-radius: 2px;
-    }
-  `
-  document.head.appendChild(style)
-}
-
-function mergeRects(rects: { x: number; y: number; w: number; h: number }[]) {
-  // Merge rects that share vertical overlap (same visual line) — height proximity check
-  // was too strict and caused pdfjs spans with slightly different heights to stack as 2x overlays
-  const merged: typeof rects = []
-  for (const r of rects) {
-    const existing = merged.find(m => {
-      const overlapTop = Math.max(m.y, r.y)
-      const overlapBottom = Math.min(m.y + m.h, r.y + r.h)
-      return overlapBottom > overlapTop
-    })
-    if (existing) {
-      const right = Math.max(existing.x + existing.w, r.x + r.w)
-      const top = Math.min(existing.y, r.y)
-      const bottom = Math.max(existing.y + existing.h, r.y + r.h)
-      existing.x = Math.min(existing.x, r.x)
-      existing.w = right - existing.x
-      existing.y = top
-      existing.h = bottom - top
-    } else {
-      merged.push({ ...r })
-    }
-  }
-  return merged
-}
-
-function applyHighlightsToLayer(wrapper: HTMLDivElement, pageNum: number, hlList: Highlight[]) {
-  wrapper.querySelectorAll('.pdf-highlight-overlay').forEach(el => el.remove())
-
-  const wrapperH = wrapper.offsetHeight || Infinity
-  const wrapperW = wrapper.offsetWidth || Infinity
-
-  const pageHighlights = hlList.filter(h => h.cfiRange === `pdf:page:${pageNum}`)
-  for (const h of pageHighlights) {
-    if (!h.rects?.length) continue
-    // Clip rects to page bounds and merge same-line rects
-    const clipped = h.rects.filter(r => r.y >= 0 && r.x >= 0 && r.y < wrapperH && r.x < wrapperW && r.w > 0 && r.h > 0)
-    for (const r of mergeRects(clipped)) {
-      const div = document.createElement('div')
-      div.className = 'pdf-highlight-overlay'
-      div.style.left = `${r.x}px`
-      div.style.top = `${r.y}px`
-      div.style.width = `${Math.min(r.w, wrapperW - r.x)}px`
-      div.style.height = `${Math.min(r.h, wrapperH - r.y)}px`
-      div.style.background = COLOR_MAP[h.color] || COLOR_MAP.yellow
-      wrapper.appendChild(div)
-    }
-  }
 }
 
 async function renderPageToWrapper(
@@ -114,11 +16,15 @@ async function renderPageToWrapper(
   pdf: PDFDocumentProxy,
   wrapper: HTMLDivElement,
   containerWidth: number,
+  containerHeight: number,
+  zoomLevel: number,
   theme: string,
 ) {
   const page = await pdf.getPage(pageNum)
   const baseViewport = page.getViewport({ scale: 1 })
-  const scale = (containerWidth - 48) / baseViewport.width
+  const scaleW = (containerWidth - 48) / baseViewport.width
+  const scaleH = (containerHeight - 48) / baseViewport.height
+  const scale = Math.min(scaleW, scaleH) * zoomLevel
   const viewport = page.getViewport({ scale })
   const dpr = window.devicePixelRatio || 1
 
@@ -143,44 +49,16 @@ async function renderPageToWrapper(
   ctx.fillStyle = resolvedTheme === 'dark' ? '#1a1a1a' : resolvedTheme === 'sepia' ? '#f4ecd8' : '#ffffff'
   ctx.fillRect(0, 0, viewport.width, viewport.height)
   await page.render({ canvasContext: ctx, viewport }).promise
-
-  // Text layer
-  const textContent = await page.getTextContent()
-  let textLayerDiv = wrapper.querySelector('.pdf-text-layer') as HTMLDivElement
-  if (!textLayerDiv) {
-    textLayerDiv = document.createElement('div')
-    textLayerDiv.className = 'pdf-text-layer'
-    wrapper.appendChild(textLayerDiv)
-  }
-  textLayerDiv.innerHTML = ''
-  textLayerDiv.style.width = `${viewport.width}px`
-  textLayerDiv.style.height = `${viewport.height}px`
-
-  const pdfjsLib = await import('pdfjs-dist')
-  const textLayer = new pdfjsLib.TextLayer({ textContentSource: textContent, container: textLayerDiv, viewport })
-  await textLayer.render()
-
-  // Ensure --scale-factor is set (pdfjs should set it, but be explicit)
-  if (!textLayerDiv.style.getPropertyValue('--scale-factor')) {
-    textLayerDiv.style.setProperty('--scale-factor', String(viewport.scale))
-  }
-
-  // Force selectable inline styles on spans only (not the container)
-  textLayerDiv.querySelectorAll<HTMLElement>('span, br').forEach(el => {
-    el.style.pointerEvents = 'auto'
-    el.style.userSelect = 'text'
-    ;(el.style as unknown as Record<string, string>).webkitUserSelect = 'text'
-    el.style.color = 'transparent'
-  })
-
-  // Highlights are applied by the re-apply effect, not here (avoids stale closure)
 }
 
-export function usePdf({ bookId, containerRef, initialPage = 1, highlights = [] }: UsePdfOptions) {
+export function usePdf({ bookId, containerRef, initialPage = 1 }: UsePdfOptions) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(initialPage)
   const [totalPages, setTotalPages] = useState(0)
+  const [zoomLevel, setZoomLevel] = useState(1.0)
+  const zoomIn = useCallback(() => setZoomLevel(z => Math.min(+(z + 0.15).toFixed(2), 3.0)), [])
+  const zoomOut = useCallback(() => setZoomLevel(z => Math.max(+(z - 0.15).toFixed(2), 0.3)), [])
   const pdfRef = useRef<PDFDocumentProxy | null>(null)
   const { settings } = useSettingsStore()
   const { saveProgress } = useProgress(bookId)
@@ -224,7 +102,6 @@ export function usePdf({ bookId, containerRef, initialPage = 1, highlights = [] 
   // Render all pages once loaded
   useEffect(() => {
     if (isLoading || !containerRef.current || !pdfRef.current) return
-    injectTextLayerStyles()
 
     const container = containerRef.current
     const pdf = pdfRef.current
@@ -236,7 +113,7 @@ export function usePdf({ bookId, containerRef, initialPage = 1, highlights = [] 
       const wrapper = document.createElement('div')
       wrapper.className = 'pdf-page-wrapper'
       wrapper.dataset.page = String(i)
-      wrapper.style.cssText = 'position:relative; display:block; line-height:0; cursor:text;'
+      wrapper.style.cssText = 'position:relative; display:block; line-height:0;'
       container.appendChild(wrapper)
     }
 
@@ -247,7 +124,7 @@ export function usePdf({ bookId, containerRef, initialPage = 1, highlights = [] 
         if (cancelled || !pdfRef.current) break
         const wrapper = container.querySelector<HTMLDivElement>(`[data-page="${i}"]`)
         if (wrapper) {
-          await renderPageToWrapper(i, pdf, wrapper, container.clientWidth, settings.theme)
+          await renderPageToWrapper(i, pdf, wrapper, container.clientWidth, container.clientHeight, zoomLevel, settings.theme)
         }
       }
     })()
@@ -261,23 +138,7 @@ export function usePdf({ bookId, containerRef, initialPage = 1, highlights = [] 
     }
 
     return () => { cancelled = true }
-  }, [isLoading]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Re-apply highlights when they change
-  useEffect(() => {
-    if (!containerRef.current || isLoading) return
-    const container = containerRef.current
-    // Clear ALL overlays from ALL pages first (handles deletion and avoids duplicates)
-    container.querySelectorAll('.pdf-highlight-overlay').forEach(el => el.remove())
-    // Re-add overlays for all current highlights
-    const affectedPages = new Set(
-      highlights.map(h => h.cfiRange.match(/^pdf:page:(\d+)$/)?.[1]).filter(Boolean)
-    )
-    affectedPages.forEach(p => {
-      const wrapper = container.querySelector<HTMLDivElement>(`[data-page="${p}"]`)
-      if (wrapper) applyHighlightsToLayer(wrapper, parseInt(p!), highlights)
-    })
-  }, [highlights, isLoading]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isLoading, zoomLevel]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Track current page via scroll
   useEffect(() => {
@@ -346,5 +207,5 @@ export function usePdf({ bookId, containerRef, initialPage = 1, highlights = [] 
     return results
   }, [])
 
-  return { isLoading, error, currentPage, totalPages, nextPage, prevPage, goToPage, search }
+  return { isLoading, error, currentPage, totalPages, nextPage, prevPage, goToPage, search, zoomLevel, zoomIn, zoomOut }
 }

@@ -12,6 +12,9 @@ const config: Configuration = {
     'dist-electron/**/*',
     'assets/**/*',
   ],
+  asarUnpack: [
+    'dist/assets/pdf.worker*.mjs',
+  ],
   win: {
     target: ['nsis', 'portable'],
     icon: 'assets/icons/icon.ico',
