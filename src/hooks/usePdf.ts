@@ -29,12 +29,11 @@ function injectTextLayerStyles() {
     .pdf-text-layer {
       position: absolute; top: 0; left: 0;
       overflow: visible;
-      pointer-events: auto;
+      pointer-events: none;
       -webkit-user-select: none;
       user-select: none;
       z-index: 2;
       line-height: 1;
-      cursor: text;
     }
     .pdf-text-layer span,
     .pdf-text-layer br {
@@ -62,14 +61,23 @@ function injectTextLayerStyles() {
 }
 
 function mergeRects(rects: { x: number; y: number; w: number; h: number }[]) {
-  // Merge rects that are on the same visual line (same Y ± 2px) to avoid double-painting
+  // Merge rects that share vertical overlap (same visual line) — height proximity check
+  // was too strict and caused pdfjs spans with slightly different heights to stack as 2x overlays
   const merged: typeof rects = []
   for (const r of rects) {
-    const existing = merged.find(m => Math.abs(m.y - r.y) < 3 && Math.abs(m.h - r.h) < 3)
+    const existing = merged.find(m => {
+      const overlapTop = Math.max(m.y, r.y)
+      const overlapBottom = Math.min(m.y + m.h, r.y + r.h)
+      return overlapBottom > overlapTop
+    })
     if (existing) {
       const right = Math.max(existing.x + existing.w, r.x + r.w)
+      const top = Math.min(existing.y, r.y)
+      const bottom = Math.max(existing.y + existing.h, r.y + r.h)
       existing.x = Math.min(existing.x, r.x)
       existing.w = right - existing.x
+      existing.y = top
+      existing.h = bottom - top
     } else {
       merged.push({ ...r })
     }
@@ -228,7 +236,7 @@ export function usePdf({ bookId, containerRef, initialPage = 1, highlights = [] 
       const wrapper = document.createElement('div')
       wrapper.className = 'pdf-page-wrapper'
       wrapper.dataset.page = String(i)
-      wrapper.style.cssText = 'position:relative; display:block; line-height:0;'
+      wrapper.style.cssText = 'position:relative; display:block; line-height:0; cursor:text;'
       container.appendChild(wrapper)
     }
 
