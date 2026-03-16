@@ -7,7 +7,6 @@ import { TocPanel } from './TocPanel'
 import { AnnotationsPanel } from './AnnotationsPanel'
 import { HighlightPopup } from './HighlightPopup'
 import { SearchBar } from './SearchBar'
-import { PageNavigation } from './PageNavigation'
 import type { Book } from '@/types/book'
 import type { Bookmark, Highlight, HighlightColor } from '@/types/progress'
 
@@ -333,9 +332,13 @@ export function EpubReader({ book, onClose }: EpubReaderProps) {
     const handler = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
 
-      if (e.key === 'f' && (e.ctrlKey || e.metaKey)) {
+      if (e.key === 'f' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault()
         setSearchOpen(true)
+        requestAnimationFrame(() => {
+          const input = document.querySelector<HTMLInputElement>('[data-search-input]')
+          input?.focus()
+        })
         return
       }
 
@@ -389,6 +392,10 @@ export function EpubReader({ book, onClose }: EpubReaderProps) {
         onTocToggle={() => setTocOpen(!isTocOpen)}
         onBookmarkToggle={() => setAnnotationPanelOpen(!isAnnotationPanelOpen)}
         onAddBookmark={handleAddBookmark}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPrevPage={prevPage}
+        onNextPage={nextPage}
       />
 
       {isSearchOpen && (
@@ -447,12 +454,6 @@ export function EpubReader({ book, onClose }: EpubReaderProps) {
             </div>
           )}
 
-          {/* Page navigation */}
-          {settings.readerFlow === 'paginated' && !isLoading && totalPages > 0 && (
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20">
-              <PageNavigation currentPage={currentPage} totalPages={totalPages} onPrev={prevPage} onNext={nextPage} />
-            </div>
-          )}
         </div>
 
         {/* Annotations panel backdrop */}

@@ -17,6 +17,13 @@ export interface Bookmark {
 
 export type HighlightColor = 'yellow' | 'red' | 'blue' | 'green' | 'pink'
 
+export interface HighlightRect {
+  x: number
+  y: number
+  w: number
+  h: number
+}
+
 export interface Highlight {
   id: string
   bookId: string
@@ -24,4 +31,5 @@ export interface Highlight {
   text: string
   color: HighlightColor
   createdAt: string
+  rects?: HighlightRect[] // page-relative pixel rects for PDF visual rendering
 }

@@ -40,6 +40,7 @@ export function SearchBar({ onSearch }: SearchBarProps) {
       <form onSubmit={handleSearch} className="flex-1">
         <input
           autoFocus
+          data-search-input
           type="text"
           placeholder="Search in book... (press Enter)"
           value={query}

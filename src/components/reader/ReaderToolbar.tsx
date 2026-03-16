@@ -15,6 +15,11 @@ interface ReaderToolbarProps {
   onTocToggle: () => void
   onBookmarkToggle: () => void
   onAddBookmark?: () => void
+  isPdf?: boolean
+  currentPage?: number
+  totalPages?: number
+  onPrevPage?: () => void
+  onNextPage?: () => void
 }
 
 const THEMES = [
@@ -24,7 +29,7 @@ const THEMES = [
   { id: 'system', label: 'System', bg: 'linear-gradient(135deg, #fff 50%, #1a1a1a 50%)', text: '#888' },
 ]
 
-export function ReaderToolbar({ book, onClose, onSearch, onTocToggle, onBookmarkToggle, onAddBookmark }: ReaderToolbarProps) {
+export function ReaderToolbar({ book, onClose, onSearch, onTocToggle, onBookmarkToggle, onAddBookmark, isPdf, currentPage, totalPages, onPrevPage, onNextPage }: ReaderToolbarProps) {
   const { settings, updateSettings } = useSettingsStore()
   const { isTocOpen, isAnnotationPanelOpen, isSearchOpen } = useReaderStore()
   const [showSettings, setShowSettings] = useState(false)
@@ -43,21 +48,43 @@ export function ReaderToolbar({ book, onClose, onSearch, onTocToggle, onBookmark
   }, [showSettings])
 
   return (
-    <div className="flex items-center gap-1 px-3 py-2 backdrop-blur-sm" style={{ background: 'var(--bg-toolbar)', borderBottom: '1px solid var(--border-color)', zIndex: 30, position: 'relative' }}>
-      {/* Back button */}
-      <Tooltip content="Back to Library">
-        <IconButton label="Back to Library" onClick={onClose}>
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </IconButton>
-      </Tooltip>
-
-      {/* Title */}
-      <div className="flex-1 mx-3 min-w-0">
-        <p className="text-sm font-medium truncate" style={{ color: 'var(--text-secondary)' }}>{book.metadata.title}</p>
-        <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{book.metadata.author}</p>
+    <div className="relative flex items-center px-3 py-2 backdrop-blur-sm" style={{ background: 'var(--bg-toolbar)', borderBottom: '1px solid var(--border-color)', zIndex: 30 }}>
+      {/* Left: back + title */}
+      <div className="flex items-center gap-1 min-w-0" style={{ flex: '1 1 0' }}>
+        <Tooltip content="Back to Library">
+          <IconButton label="Back to Library" onClick={onClose}>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </IconButton>
+        </Tooltip>
+        <div className="mx-2 min-w-0">
+          <p className="text-sm font-medium truncate" style={{ color: 'var(--text-secondary)' }}>{book.metadata.title}</p>
+          <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{book.metadata.author}</p>
+        </div>
       </div>
+
+      {/* Center: page navigation */}
+      {totalPages && totalPages > 1 && onPrevPage && onNextPage && (
+        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1">
+          <IconButton label="Previous page" onClick={onPrevPage} disabled={currentPage !== undefined && currentPage <= 1} size="sm">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </IconButton>
+          <span className="text-sm min-w-[72px] text-center select-none" style={{ color: 'var(--text-muted)' }}>
+            {currentPage} / {totalPages}
+          </span>
+          <IconButton label="Next page" onClick={onNextPage} disabled={currentPage !== undefined && totalPages !== undefined && currentPage >= totalPages} size="sm">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </IconButton>
+        </div>
+      )}
+
+      {/* Right: action buttons */}
+      <div className="flex items-center gap-1" style={{ flex: '1 1 0', justifyContent: 'flex-end' }}>
 
       {/* TOC (EPUB only) */}
       {book.format === 'epub' && (
@@ -71,7 +98,7 @@ export function ReaderToolbar({ book, onClose, onSearch, onTocToggle, onBookmark
       )}
 
       {/* Search */}
-      <Tooltip content="Search (Ctrl+F)">
+      <Tooltip content={`Search (${navigator.platform.startsWith('Mac') ? '⌘' : 'Ctrl+'}F)`}>
         <IconButton label="Search" active={isSearchOpen} onClick={onSearch}>
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -83,7 +110,7 @@ export function ReaderToolbar({ book, onClose, onSearch, onTocToggle, onBookmark
       <Tooltip content="Annotations">
         <IconButton label="Annotations" active={isAnnotationPanelOpen} onClick={onBookmarkToggle}>
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
           </svg>
         </IconButton>
       </Tooltip>
@@ -176,22 +203,29 @@ export function ReaderToolbar({ book, onClose, onSearch, onTocToggle, onBookmark
               {/* Flow mode */}
               <div>
                 <label className="text-xs uppercase tracking-wide mb-2 block" style={{ color: 'var(--text-muted)' }}>Layout</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {(['paginated', 'scrolling'] as const).map(flow => (
-                    <button
-                      key={flow}
-                      onClick={() => updateSettings({ readerFlow: flow })}
-                      className="py-1.5 rounded-lg text-xs font-medium transition-all capitalize"
-                      style={settings.readerFlow === flow ? { background: 'var(--accent-active)', color: '#fff' } : { background: 'var(--bg-surface)', color: 'var(--text-muted)' }}
-                    >
-                      {flow}
-                    </button>
-                  ))}
-                </div>
+                {isPdf ? (
+                  <p className="text-xs py-1.5 px-2 rounded-lg text-center" style={{ background: 'var(--bg-surface)', color: 'var(--text-muted)' }}>
+                    Scroll Only for PDF's
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    {(['paginated', 'scrolling'] as const).map(flow => (
+                      <button
+                        key={flow}
+                        onClick={() => updateSettings({ readerFlow: flow })}
+                        className="py-1.5 rounded-lg text-xs font-medium transition-all capitalize"
+                        style={settings.readerFlow === flow ? { background: 'var(--accent-active)', color: '#fff' } : { background: 'var(--bg-surface)', color: 'var(--text-muted)' }}
+                      >
+                        {flow}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
         )}
+      </div>
       </div>
     </div>
   )
