@@ -25,13 +25,19 @@ Use `;` (not `&&`) between pkill and open so open always runs even if no process
 
 ### macOS: prepare DMG for distribution
 
-After building, strip extended attributes before repackaging the DMG — otherwise Gatekeeper marks the app as "damaged" for users who download it:
+Must follow this exact sequence — electron-builder overwrites signing if steps are out of order. Use `CSC_IDENTITY_AUTO_DISCOVERY=false` to prevent it from interfering:
 
 ```bash
+npm run build:vite
+CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --mac dir
 codesign --force --deep --sign - "release/mac-arm64/Ink Book Reader.app"
 xattr -cr "release/mac-arm64/Ink Book Reader.app"
-npx electron-builder --mac dmg
+CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --mac dmg
+codesign --force --sign - "release/Ink Book Reader-1.0.0-arm64.dmg"
+xattr -cr "release/Ink Book Reader-1.0.0-arm64.dmg"
 ```
+
+Both the `.app` and the `.dmg` must be signed and stripped. Skipping either causes Gatekeeper to show "damaged" for users downloading from the internet.
 
 ## Architecture
 
