@@ -23,6 +23,16 @@ pkill -f "Ink Book Reader" ; sleep 3 ; open "release/mac-arm64/Ink Book Reader.a
 
 Use `;` (not `&&`) between pkill and open so open always runs even if no process was found.
 
+### macOS: prepare DMG for distribution
+
+After building, strip extended attributes before repackaging the DMG — otherwise Gatekeeper marks the app as "damaged" for users who download it:
+
+```bash
+codesign --force --deep --sign - "release/mac-arm64/Ink Book Reader.app"
+xattr -cr "release/mac-arm64/Ink Book Reader.app"
+npx electron-builder --mac dmg
+```
+
 ## Architecture
 
 Two-process Electron app. The **main process** (`electron/`) handles all file I/O and persistence. The **renderer process** (`src/`) is a React SPA that communicates exclusively through `window.electronAPI`.
