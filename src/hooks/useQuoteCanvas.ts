@@ -116,7 +116,7 @@ export function useQuoteCanvas() {
     ctx.fillStyle = `${textStyle.color}60`
     ctx.textAlign = 'right'
     ctx.textBaseline = 'bottom'
-    ctx.fillText('Ink Book Reader', canvasWidth - padding / 2, canvasHeight - padding / 4)
+    ctx.fillText('Ink', canvasWidth - padding / 2, canvasHeight - padding / 4)
   }, [])
 
   const exportDataUrl = useCallback((format: 'png' | 'jpeg' = 'png'): string => {

@@ -1,7 +1,7 @@
 {
   "name": "ink-book-reader",
   "version": "1.0.0",
-  "description": "Ink Book Reader - Read EPUB, PDF, TXT, and HTML books",
+  "description": "Ink - Read EPUB, PDF, TXT, and HTML books",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
@@ -28,7 +28,7 @@
   },
   "build": {
     "appId": "com.ink.bookreader",
-    "productName": "Ink Book Reader",
+    "productName": "Ink",
     "directories": {
       "output": "release",
       "buildResources": "assets"

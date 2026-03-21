@@ -2,7 +2,7 @@ import type { Configuration } from 'electron-builder'
 
 const config: Configuration = {
   appId: 'com.ink.bookreader',
-  productName: 'Ink Book Reader',
+  productName: 'Ink',
   directories: {
     output: 'release',
     buildResources: 'assets',
