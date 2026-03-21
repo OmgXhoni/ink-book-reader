@@ -23,7 +23,8 @@ const config: Configuration = {
   mac: {
     target: ['dmg'],
     category: 'public.app-category.books',
-    icon: 'assets/icons/icon.icns',
+    icon: 'assets/icons/icon-256.png',
+    artifactName: '${productName}-${version}.${ext}',
   },
   linux: {
     target: ['AppImage'],

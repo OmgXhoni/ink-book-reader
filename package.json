@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build && electron-builder",
+    "build:win": "tsc && vite build && electron-builder --win",
+    "build:mac": "tsc && vite build && electron-builder --mac",
     "build:vite": "tsc && vite build",
     "preview": "vite preview",
     "electron:dev": "vite build --watch & wait-on dist/index.html && electron .",
@@ -47,7 +49,8 @@
     "mac": {
       "target": ["dmg"],
       "category": "public.app-category.books",
-      "icon": "assets/icons/icon.icns"
+      "icon": "assets/icons/icon-256.png",
+      "artifactName": "${productName}-${version}.${ext}"
     },
     "linux": {
       "target": ["AppImage"],
