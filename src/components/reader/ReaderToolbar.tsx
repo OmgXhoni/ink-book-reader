@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useReaderStore } from '@/store/readerStore'
 import { IconButton } from '../shared/IconButton'
-import { Slider } from '../shared/Slider'
 import { Tooltip } from '../shared/Tooltip'
 import { FontSelector } from './FontSelector'
 import type { Book } from '@/types/book'
@@ -23,6 +22,36 @@ interface ReaderToolbarProps {
   zoomLevel?: number
   onZoomIn?: () => void
   onZoomOut?: () => void
+}
+
+function OptionRow<T extends number>({ label, options, value, onChange, format }: {
+  label: string
+  options: T[]
+  value: T
+  onChange: (v: T) => void
+  format?: (v: T) => string
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{label}</span>
+      <div className="flex gap-1">
+        {options.map(opt => (
+          <button
+            key={opt}
+            onClick={() => onChange(opt)}
+            className="flex-1 py-1 rounded text-xs font-medium transition-colors"
+            style={{
+              background: value === opt ? 'var(--accent-active)' : 'var(--bg-input)',
+              color: value === opt ? '#fff' : 'var(--text-secondary)',
+              border: `1px solid ${value === opt ? 'var(--accent-active)' : 'var(--border-color)'}`,
+            }}
+          >
+            {format ? format(opt) : opt}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 const THEMES = [
@@ -183,24 +212,12 @@ export function ReaderToolbar({ book, onClose, onSearch, onTocToggle, onBookmark
               </div>
 
               {/* Font size */}
-              <Slider
+              <OptionRow
                 label="Font Size"
-                min={12}
-                max={32}
+                options={[24, 28, 32]}
                 value={settings.fontSize}
                 onChange={v => updateSettings({ fontSize: v })}
-                formatValue={v => `${v}px`}
-              />
-
-              {/* Line height */}
-              <Slider
-                label="Line Height"
-                min={1.2}
-                max={2.5}
-                step={0.1}
-                value={settings.lineHeight}
-                onChange={v => updateSettings({ lineHeight: v })}
-                formatValue={v => v.toFixed(1)}
+                format={v => v === 24 ? 'Small' : v === 28 ? 'Medium' : 'Large'}
               />
 
               {/* Font family */}
@@ -209,22 +226,35 @@ export function ReaderToolbar({ book, onClose, onSearch, onTocToggle, onBookmark
                 <FontSelector />
               </div>
 
-              {/* Margins */}
-              <div>
-                <label className="text-xs uppercase tracking-wide mb-2 block" style={{ color: 'var(--text-muted)' }}>Margins</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(['small', 'medium', 'large'] as const).map(size => (
-                    <button
-                      key={size}
-                      onClick={() => updateSettings({ marginSize: size })}
-                      className="py-1.5 rounded-lg text-xs font-medium transition-all capitalize"
-                      style={settings.marginSize === size ? { background: 'var(--accent-active)', color: '#fff' } : { background: 'var(--bg-surface)', color: 'var(--text-muted)' }}
-                    >
-                      {size}
-                    </button>
-                  ))}
+              {/* Line height — txt and html only */}
+              {(book.format === 'txt' || book.format === 'html') && (
+                <OptionRow
+                  label="Line Height"
+                  options={[1.2, 1.4, 1.6, 1.8, 2.0]}
+                  value={settings.lineHeight}
+                  onChange={v => updateSettings({ lineHeight: v })}
+                  format={v => v.toFixed(1)}
+                />
+              )}
+
+              {/* Margins — txt and html only */}
+              {(book.format === 'txt' || book.format === 'html') && (
+                <div>
+                  <label className="text-xs uppercase tracking-wide mb-2 block" style={{ color: 'var(--text-muted)' }}>Margins</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['small', 'medium', 'large'] as const).map(size => (
+                      <button
+                        key={size}
+                        onClick={() => updateSettings({ marginSize: size })}
+                        className="py-1.5 rounded-lg text-xs font-medium transition-all capitalize"
+                        style={settings.marginSize === size ? { background: 'var(--accent-active)', color: '#fff' } : { background: 'var(--bg-surface)', color: 'var(--text-muted)' }}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Flow mode */}
               <div>

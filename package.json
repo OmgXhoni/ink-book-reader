@@ -1,7 +1,7 @@
 {
-  "name": "ink-book-reader",
-  "version": "1.0.0",
-  "description": "Ink - Read EPUB, PDF, TXT, and HTML books",
+  "name": "ink-ebook-reader",
+  "version": "1.0.1",
+  "description": "Ink eBook Reader - Read EPUB, PDF, TXT, and HTML books",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",

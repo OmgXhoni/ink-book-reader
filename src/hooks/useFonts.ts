@@ -43,7 +43,10 @@ export function useFonts() {
 
   // Load active bundled font variant
   useEffect(() => {
-    if (!settings.bundledFamilyId) return
+    if (!settings.bundledFamilyId) {
+      useFontStore.getState().setFontApplying(false)
+      return
+    }
 
     const family = BUNDLED_FONT_FAMILIES.find(f => f.id === settings.bundledFamilyId)
     if (!family) return
@@ -52,10 +55,14 @@ export function useFonts() {
     if (!variant) return
 
     let cancelled = false
+    useFontStore.getState().setFontApplying(true)
 
     const load = async () => {
       const dataUrl = await loadBundledVariant(family.id, variant.fileName)
-      if (cancelled || !dataUrl) return
+      if (cancelled || !dataUrl) {
+        if (!cancelled) useFontStore.getState().setFontApplying(false)
+        return
+      }
 
       // Remove previously injected bundled font
       if (activeFontFaceRef.current) {
@@ -82,6 +89,7 @@ export function useFonts() {
       } catch (err) {
         console.error('Failed to load bundled font:', family.name, variant.label, err)
       }
+      if (!cancelled) useFontStore.getState().setFontApplying(false)
     }
 
     load()

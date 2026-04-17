@@ -17,8 +17,8 @@ npm run lint         # ESLint across all .ts/.tsx files, zero warnings allowed
 
 ```bash
 npm run build
-codesign --force --deep --sign - "release/mac-arm64/Ink Book Reader.app"
-pkill -f "Ink Book Reader" ; sleep 3 ; open "release/mac-arm64/Ink Book Reader.app"
+codesign --force --deep --sign - "release/mac-arm64/Ink eBook Reader.app"
+pkill -f "Ink eBook Reader" ; sleep 3 ; open "release/mac-arm64/Ink eBook Reader.app"
 ```
 
 Use `;` (not `&&`) between pkill and open so open always runs even if no process was found.
@@ -33,16 +33,16 @@ Must follow this exact sequence. Two rules that must both be satisfied:
 npm run build:vite
 CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --mac dir
 # Sign inside-out, no hardened runtime:
-find "release/mac-arm64/Ink Book Reader.app/Contents/Frameworks" \( -name "*.dylib" -o -name "*.so" \) -exec codesign --force --sign - {} \;
-codesign --force --sign - "release/mac-arm64/Ink Book Reader.app/Contents/Frameworks/Ink Book Reader Helper (Renderer).app"
-codesign --force --sign - "release/mac-arm64/Ink Book Reader.app/Contents/Frameworks/Ink Book Reader Helper (Plugin).app"
-codesign --force --sign - "release/mac-arm64/Ink Book Reader.app/Contents/Frameworks/Ink Book Reader Helper (GPU).app"
-codesign --force --sign - "release/mac-arm64/Ink Book Reader.app/Contents/Frameworks/Ink Book Reader Helper.app"
-codesign --force --sign - "release/mac-arm64/Ink Book Reader.app/Contents/Frameworks/Electron Framework.framework"
-codesign --force --sign - "release/mac-arm64/Ink Book Reader.app"
-xattr -cr "release/mac-arm64/Ink Book Reader.app"
+find "release/mac-arm64/Ink eBook Reader.app/Contents/Frameworks" \( -name "*.dylib" -o -name "*.so" \) -exec codesign --force --sign - {} \;
+codesign --force --sign - "release/mac-arm64/Ink eBook Reader.app/Contents/Frameworks/Ink eBook Reader Helper (Renderer).app"
+codesign --force --sign - "release/mac-arm64/Ink eBook Reader.app/Contents/Frameworks/Ink eBook Reader Helper (Plugin).app"
+codesign --force --sign - "release/mac-arm64/Ink eBook Reader.app/Contents/Frameworks/Ink eBook Reader Helper (GPU).app"
+codesign --force --sign - "release/mac-arm64/Ink eBook Reader.app/Contents/Frameworks/Ink eBook Reader Helper.app"
+codesign --force --sign - "release/mac-arm64/Ink eBook Reader.app/Contents/Frameworks/Electron Framework.framework"
+codesign --force --sign - "release/mac-arm64/Ink eBook Reader.app"
+xattr -cr "release/mac-arm64/Ink eBook Reader.app"
 CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --mac dmg
-xattr -cr "release/Ink Book Reader-1.0.0-arm64.dmg"
+xattr -cr "release/Ink eBook Reader-1.0.0-arm64.dmg"
 ```
 
 Result: `flags=0x2(adhoc)` on all components, `com.ink.bookreader.*` identifiers, sealed resources — Gatekeeper shows "unverified" warning (bypassable) instead of "damaged" (not bypassable).
@@ -80,7 +80,7 @@ IPC channels follow `domain:action` (e.g. `library:add-book`, `progress:save`).
 - `settings: AppSettings`
 - `fonts: CustomFont[]`
 
-Data lives in `<userData>/store.json` (macOS: `~/Library/Application Support/ink-book-reader/`). Book files are never copied — only `filePath` is stored. Covers and fonts are copied into `<userData>/covers/` and `<userData>/fonts/` by `electron/utils/paths.ts`.
+Data lives in `<userData>/store.json` (macOS: `~/Library/Application Support/ink-ebook-reader/`). Book files are never copied — only `filePath` is stored. Covers and fonts are copied into `<userData>/covers/` and `<userData>/fonts/` by `electron/utils/paths.ts`.
 
 ### Renderer state (Zustand stores)
 

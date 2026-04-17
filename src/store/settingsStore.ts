@@ -3,7 +3,7 @@ import type { AppSettings } from '@/types/settings'
 
 const defaultSettings: AppSettings = {
   theme: 'system',
-  fontSize: 18,
+  fontSize: 24,
   fontFamily: 'Georgia',
   lineHeight: 1.6,
   readerFlow: 'paginated',

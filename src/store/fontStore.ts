@@ -7,12 +7,14 @@ interface FontState {
   bundledFamilies: BundledFontFamily[]
   activeBundledDataUrl: string | null
   isLoading: boolean
+  fontApplying: boolean
 
   loadFonts: () => Promise<void>
   importFonts: () => Promise<void>
   removeFont: (fontId: string) => Promise<void>
   getFontDataUrl: (fontId: string) => Promise<string | null>
   loadBundledVariant: (familyId: string, fileName: string) => Promise<string | null>
+  setFontApplying: (v: boolean) => void
 }
 
 export const useFontStore = create<FontState>((set, get) => ({
@@ -20,6 +22,9 @@ export const useFontStore = create<FontState>((set, get) => ({
   bundledFamilies: BUNDLED_FONT_FAMILIES,
   activeBundledDataUrl: null,
   isLoading: false,
+  fontApplying: false,
+
+  setFontApplying: (v) => set({ fontApplying: v }),
 
   loadFonts: async () => {
     set({ isLoading: true })

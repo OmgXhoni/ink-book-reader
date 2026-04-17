@@ -102,6 +102,7 @@ export function TxtReader({ book, onClose }: TxtReaderProps) {
                 fontFamily: settings.fontFamily,
                 fontSize: `${settings.fontSize}px`,
                 lineHeight: settings.lineHeight,
+                fontWeight: settings.fontWeight || undefined,
                 color: themeColor,
                 paddingLeft: marginPad,
                 paddingRight: marginPad,

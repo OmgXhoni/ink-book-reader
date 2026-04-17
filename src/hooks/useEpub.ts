@@ -3,6 +3,8 @@ import type { Book as EpubBook, Rendition } from 'epubjs'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useFontStore } from '@/store/fontStore'
 import { useProgress } from './useProgress'
+import { scaleTotalPages } from '@/utils/fontScale'
+import { NATIVE_FONT } from '@/components/reader/FontSelector'
 import type { SearchResult } from '@/store/readerStore'
 
 interface UseEpubOptions {
@@ -31,11 +33,17 @@ export function useEpub({ bookId, containerRef, initialCfi, onTocLoaded, onTextS
   const renditionRef = useRef<Rendition | null>(null)
   const isPageTurnRef = useRef(false)
   const latestCfiRef = useRef<string>(initialCfi || '')
+  const baseLocationsTotal = useRef(0)
   const onTextSelectedRef = useRef(onTextSelected)
   onTextSelectedRef.current = onTextSelected
   const { settings } = useSettingsStore()
   const { activeBundledDataUrl } = useFontStore()
   const { saveProgress } = useProgress(bookId)
+
+  // Scale page count based on font size, font family width, and weight
+  const getScaledTotal = useCallback(() => {
+    return scaleTotalPages(baseLocationsTotal.current, settings.fontSize, settings.fontFamily, settings.fontWeight)
+  }, [settings.fontSize, settings.fontFamily, settings.fontWeight])
 
   const applyTheme = useCallback((rendition: Rendition) => {
     const resolvedTheme = settings.theme === 'system'
@@ -53,8 +61,9 @@ export function useEpub({ bookId, containerRef, initialCfi, onTocLoaded, onTextS
       sepia: '#5c4b1e',
     }
 
+    const isNative = settings.fontFamily === NATIVE_FONT
+
     const bodyStyles: Record<string, string> = {
-      'font-family': `"${settings.fontFamily}", serif !important`,
       'font-size': `${settings.fontSize}px !important`,
       'line-height': `${settings.lineHeight} !important`,
       'padding': settings.marginSize === 'small' ? '1rem 2rem' : settings.marginSize === 'large' ? '1rem 6rem' : '1rem 4rem',
@@ -62,8 +71,18 @@ export function useEpub({ bookId, containerRef, initialCfi, onTocLoaded, onTextS
       'color': `${colors[resolvedTheme]} !important`,
     }
 
-    if (settings.fontWeight) {
-      bodyStyles['font-weight'] = `${settings.fontWeight} !important`
+    const textElements = 'p, h1, h2, h3, h4, h5, h6, span, div, li, a, em, strong, blockquote, td, th, dd, dt, figcaption, cite, pre, code'
+    const textOverrides: Record<string, string> = {
+      'color': 'inherit !important',
+    }
+
+    if (!isNative) {
+      bodyStyles['font-family'] = `"${settings.fontFamily}", serif !important`
+      textOverrides['font-family'] = 'inherit !important'
+      if (settings.fontWeight) {
+        bodyStyles['font-weight'] = `${settings.fontWeight} !important`
+        textOverrides['font-weight'] = 'inherit !important'
+      }
     }
 
     rendition.themes.default({
@@ -72,29 +91,42 @@ export function useEpub({ bookId, containerRef, initialCfi, onTocLoaded, onTextS
         'mix-blend-mode': 'normal !important',
         'filter': 'none !important',
       },
-      'p, h1, h2, h3, h4, h5, h6, span, div, li, a, em, strong, blockquote': {
-        'color': `inherit !important`,
-      },
+      [textElements]: textOverrides,
     })
 
-    // Inject @font-face into epub iframe for bundled/custom fonts
-    if (activeBundledDataUrl && settings.bundledFamilyId) {
-      const fontName = settings.fontFamily
-      const mimeType = activeBundledDataUrl.startsWith('data:font/otf') ? 'font/otf' : 'font/ttf'
-      const fontFaceCSS = `@font-face { font-family: "${fontName}"; src: url("${activeBundledDataUrl}") format("${mimeType === 'font/otf' ? 'opentype' : 'truetype'}"); font-display: swap; }`
+    // Inject @font-face into epub iframe for bundled/custom fonts (skip for native)
+    const fontName = settings.fontFamily
+    const fontFaceCSS = !isNative && activeBundledDataUrl && settings.bundledFamilyId
+      ? (() => {
+          const mimeType = activeBundledDataUrl.startsWith('data:font/otf') ? 'font/otf' : 'font/ttf'
+          return `@font-face { font-family: "${fontName}"; src: url("${activeBundledDataUrl}") format("${mimeType === 'font/otf' ? 'opentype' : 'truetype'}"); font-display: swap; }`
+        })()
+      : null
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      rendition.hooks.content.register((contents: any) => {
-        const doc = contents.document as Document
-        // Remove old injected font style if any
-        const oldStyle = doc.getElementById('ink-injected-font')
-        if (oldStyle) oldStyle.remove()
+    // Helper to inject/remove font style in a document
+    const injectFontIntoDoc = (doc: Document) => {
+      const oldStyle = doc.getElementById('ink-injected-font')
+      if (oldStyle) oldStyle.remove()
+      if (fontFaceCSS) {
         const style = doc.createElement('style')
         style.id = 'ink-injected-font'
         style.textContent = fontFaceCSS
         doc.head.appendChild(style)
-      })
+      }
     }
+
+    // Inject into currently displayed iframe content immediately
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const currentContents = (rendition as any).getContents?.() ?? []
+    for (const contents of currentContents) {
+      injectFontIntoDoc(contents.document as Document)
+    }
+
+    // Also register hook for future content loads (page turns)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    rendition.hooks.content.register((contents: any) => {
+      injectFontIntoDoc(contents.document as Document)
+    })
   }, [settings, activeBundledDataUrl])
 
   useEffect(() => {
@@ -141,11 +173,12 @@ export function useEpub({ bookId, containerRef, initialCfi, onTocLoaded, onTextS
           onTocLoaded(mapToc(nav.toc))
         }
 
-        // Generate locations BEFORE display so relocated events have accurate data
+        // Generate locations once for stable percentage tracking
         await book.locations.generate(1024)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const total = (book.locations as any).total ?? 0
-        setTotalPages(total)
+        baseLocationsTotal.current = (book.locations as any).total ?? 0
+        const scaledTotal = getScaledTotal()
+        setTotalPages(scaledTotal)
 
         if (isScrolled) {
           // Scrolling mode: forward wheel + arrow keys to the continuous scroll container
@@ -206,13 +239,16 @@ export function useEpub({ bookId, containerRef, initialCfi, onTocLoaded, onTextS
           const pct = book.locations.percentageFromCfi(loc.start.cfi) as any as number
           const pctSafe = typeof pct === 'number' && !isNaN(pct) ? pct : 0
           setPercentage(Math.round(pctSafe * 100))
+          const scaledTotal = getScaledTotal()
+          setTotalPages(scaledTotal)
           // For page turns, use smooth +1/-1 (already set). For jumps, compute from percentage.
           if (!isPageTurnRef.current) {
-            const page = loc.atStart ? 1 : Math.max(1, Math.ceil(pctSafe * total))
+            const page = loc.atStart ? 1 : Math.max(1, Math.ceil(pctSafe * scaledTotal))
             setCurrentPage(page)
           }
           isPageTurnRef.current = false
-          saveProgress(loc.start.cfi, Math.round(pctSafe * 100), total)
+          // Save base (unscaled) total so library can apply its own scaling
+          saveProgress(loc.start.cfi, Math.round(pctSafe * 100), baseLocationsTotal.current)
         })
 
         // Listen for text selection
@@ -269,15 +305,31 @@ export function useEpub({ bookId, containerRef, initialCfi, onTocLoaded, onTextS
     }
   }, [applyTheme])
 
+  // Update page count when font size or line height changes
+  useEffect(() => {
+    if (!baseLocationsTotal.current) return
+    const newTotal = getScaledTotal()
+    setTotalPages(newTotal)
+    // Recompute current page from percentage
+    const cfi = latestCfiRef.current
+    const book = bookRef.current
+    if (cfi && book) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const pct = book.locations.percentageFromCfi(cfi) as any as number
+      const pctSafe = typeof pct === 'number' && !isNaN(pct) ? pct : 0
+      setCurrentPage(Math.max(1, Math.ceil(pctSafe * newTotal)))
+    }
+  }, [getScaledTotal])
+
   const nextPage = useCallback(() => {
-    if (settings.readerFlow !== 'paginated') return // no page turning in scroll mode
+    if (settings.readerFlow !== 'paginated') return
     isPageTurnRef.current = true
     setCurrentPage(p => p + 1)
     renditionRef.current?.next()
   }, [settings.readerFlow])
 
   const prevPage = useCallback(() => {
-    if (settings.readerFlow !== 'paginated') return // no page turning in scroll mode
+    if (settings.readerFlow !== 'paginated') return
     isPageTurnRef.current = true
     setCurrentPage(p => Math.max(1, p - 1))
     renditionRef.current?.prev()

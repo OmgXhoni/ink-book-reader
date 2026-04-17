@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
 import type { Book } from '@/types/book'
+import { useSettingsStore } from '@/store/settingsStore'
+import { scaleTotalPages } from '@/utils/fontScale'
 import { ProgressRing } from '../shared/ProgressRing'
 import { BookContextMenu } from './BookContextMenu'
 
@@ -25,6 +27,12 @@ const FORMAT_COLORS: Record<string, string> = {
 export function BookCard({ book, progress = 0, totalPages, onClick, onDelete, onEditMetadata, onOpenQuote, onResetToNew, onSetFinished }: BookCardProps) {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
   const [coverError, setCoverError] = useState(false)
+  const { settings } = useSettingsStore()
+
+  // Scale page count to match current font size, font family, and weight
+  const scaledTotalPages = totalPages
+    ? scaleTotalPages(totalPages, settings.fontSize, settings.fontFamily, settings.fontWeight)
+    : undefined
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -92,7 +100,7 @@ export function BookCard({ book, progress = 0, totalPages, onClick, onDelete, on
               <>
                 <div className="flex items-center justify-between text-[10px] mb-0.5" style={{ color: 'var(--text-muted)' }}>
                   <span>{progress}%</span>
-                  <span>{totalPages ? `${Math.round(totalPages * (100 - progress) / 100)} pages left` : `${100 - progress}% left`}</span>
+                  <span>{scaledTotalPages ? `${Math.round(scaledTotalPages * (100 - progress) / 100)} pages left` : `${100 - progress}% left`}</span>
                 </div>
                 <div className="w-full h-1 rounded-full overflow-hidden" style={{ background: 'var(--bg-card-placeholder)' }}>
                   <div

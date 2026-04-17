@@ -1,8 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useFontStore } from '@/store/fontStore'
 import { BUNDLED_FONT_FAMILIES, type BundledFontFamily } from '@/data/bundledFonts'
 
+export const NATIVE_FONT = '__native__'
 const SYSTEM_FONTS = ['Georgia', 'Times New Roman', 'Arial', 'Verdana', 'Palatino', 'Garamond', 'Baskerville']
 
 export function FontSelector() {
@@ -24,9 +25,11 @@ export function FontSelector() {
     return () => document.removeEventListener('mousedown', handler)
   }, [isOpen])
 
-  const displayName = settings.bundledFamilyId
-    ? `${settings.fontFamily}${settings.fontVariant && settings.fontVariant !== 'Regular' ? ` — ${settings.fontVariant}` : ''}`
-    : settings.fontFamily
+  const displayName = settings.fontFamily === NATIVE_FONT
+    ? '✦ NATIVE'
+    : settings.bundledFamilyId
+      ? `${settings.fontFamily}${settings.fontVariant && settings.fontVariant !== 'Regular' ? ` — ${settings.fontVariant}` : ''}`
+      : settings.fontFamily
 
   const selectSystemFont = (name: string) => {
     updateSettings({ fontFamily: name, fontVariant: undefined, fontWeight: undefined, bundledFamilyId: undefined })
@@ -72,28 +75,21 @@ export function FontSelector() {
           className="absolute left-0 right-0 top-full mt-1 rounded-xl shadow-2xl z-50 overflow-hidden"
           style={{ background: 'var(--bg-toolbar)', border: '1px solid var(--border-color)', maxHeight: '320px', overflowY: 'auto' }}
         >
-          {/* System fonts */}
-          <div className="px-3 py-1.5">
-            <p className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: 'var(--text-faint)' }}>System</p>
-          </div>
-          {SYSTEM_FONTS.map(name => (
-            <button
-              key={name}
-              onClick={() => selectSystemFont(name)}
-              className="w-full px-3 py-1.5 text-sm text-left transition-colors"
-              style={{
-                color: settings.fontFamily === name && !settings.bundledFamilyId ? 'var(--accent-active)' : 'var(--text-secondary)',
-                fontFamily: name,
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-surface-hover)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
-            >
-              {name}
-            </button>
-          ))}
+          {/* Native (EPUB default) */}
+          <button
+            onClick={() => selectSystemFont(NATIVE_FONT)}
+            className="w-full px-3 py-1.5 text-sm text-left transition-colors font-medium"
+            style={{
+              color: settings.fontFamily === NATIVE_FONT ? 'var(--accent-active)' : 'var(--text-secondary)',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-surface-hover)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+          >
+            ✦ NATIVE
+          </button>
 
           {/* Ink fonts (bundled) */}
-          <div className="px-3 py-1.5 mt-1" style={{ borderTop: '1px solid var(--border-color)' }}>
+          <div className="px-3 py-1.5" style={{ borderTop: '1px solid var(--border-color)' }}>
             <p className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: 'var(--text-faint)' }}>Ink Fonts</p>
           </div>
           {BUNDLED_FONT_FAMILIES.map(family => {
@@ -150,6 +146,26 @@ export function FontSelector() {
               </div>
             )
           })}
+
+          {/* System fonts */}
+          <div className="px-3 py-1.5 mt-1" style={{ borderTop: '1px solid var(--border-color)' }}>
+            <p className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: 'var(--text-faint)' }}>System</p>
+          </div>
+          {SYSTEM_FONTS.map(name => (
+            <button
+              key={name}
+              onClick={() => selectSystemFont(name)}
+              className="w-full px-3 py-1.5 text-sm text-left transition-colors"
+              style={{
+                color: settings.fontFamily === name && !settings.bundledFamilyId ? 'var(--accent-active)' : 'var(--text-secondary)',
+                fontFamily: name,
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-surface-hover)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+            >
+              {name}
+            </button>
+          ))}
 
           {/* Custom fonts */}
           {fonts.length > 0 && (
